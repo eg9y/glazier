@@ -1,4 +1,5 @@
 import type { Meta, StoryFn } from "@storybook/react";
+import { useRef } from "react";
 import {
 	Taskbar,
 	Window,
@@ -28,11 +29,38 @@ function TitleBar({
 	const { state, updateWindow } = useWindowManager();
 	const win = state.windows.find((w) => w.id === windowId);
 
+	const titleBarRef = useRef<HTMLDivElement>(null);
+
 	const { isDragging, dragHandleProps } = useDrag({
-		onDrag: (_, delta) => {
-			if (!win || win.displayState === "maximized") {
+		onDrag: (position, delta) => {
+			if (!win) {
 				return;
 			}
+
+			if (win.displayState === "maximized") {
+				const titleBar = titleBarRef.current;
+				if (!titleBar) {
+					return;
+				}
+
+				const windowEl = titleBar.offsetParent as HTMLElement | null;
+				const container = windowEl?.offsetParent as HTMLElement | null;
+				const containerRect = container?.getBoundingClientRect();
+
+				updateWindow(windowId, {
+					displayState: "normal",
+					position: {
+						x: position.x - (containerRect?.left ?? 0) - win.size.width / 2,
+						y:
+							position.y -
+							(containerRect?.top ?? 0) -
+							titleBar.offsetHeight / 2,
+					},
+					previousBounds: undefined,
+				});
+				return;
+			}
+
 			updateWindow(windowId, {
 				position: {
 					x: win.position.x + delta.x,
@@ -44,6 +72,7 @@ function TitleBar({
 
 	return (
 		<div
+			ref={titleBarRef}
 			{...dragHandleProps}
 			style={{
 				padding: "8px 12px",

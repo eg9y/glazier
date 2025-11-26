@@ -26,6 +26,19 @@ export function useDrag(options: UseDragOptions = {}): UseDragReturn {
 
 	const handlePointerDown = useCallback(
 		(e: React.PointerEvent<Element>) => {
+			// Don't start drag if the event originated from an interactive element
+			const target = e.target as HTMLElement;
+			if (
+				target instanceof HTMLElement &&
+				(target.closest("button") ||
+					target.closest("a") ||
+					target.closest("input") ||
+					target.closest("select") ||
+					target.closest("textarea") ||
+					target.closest('[role="button"]'))
+			) {
+				return;
+			}
 			e.currentTarget.setPointerCapture(e.pointerId);
 			setIsDragging(true);
 			const pos = { x: e.clientX, y: e.clientY };

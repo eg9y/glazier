@@ -32,8 +32,8 @@ export function Window({ id, children, className, style }: WindowProps) {
 			: `translate3d(${position.x}px, ${position.y}px, 0)`,
 		width: isMaximized ? "100%" : size.width,
 		height: isMaximized ? "100%" : size.height,
-		top: isMaximized ? 0 : undefined,
-		left: isMaximized ? 0 : undefined,
+		top: 0,
+		left: 0,
 		zIndex,
 		...style,
 	};
