@@ -25,6 +25,7 @@ describe("Window", () => {
 						position: { x: 100, y: 100 },
 						size: { width: 300, height: 200 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 				]}
 			>
@@ -48,6 +49,7 @@ describe("Window", () => {
 						position: { x: 150, y: 200 },
 						size: { width: 400, height: 300 },
 						zIndex: 5,
+						displayState: "normal",
 					},
 				]}
 			>
@@ -77,6 +79,7 @@ describe("Window", () => {
 						position: { x: 0, y: 0 },
 						size: { width: 200, height: 100 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 				]}
 			>
@@ -100,6 +103,7 @@ describe("Window", () => {
 						position: { x: 0, y: 0 },
 						size: { width: 200, height: 100 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 				]}
 			>
@@ -113,6 +117,58 @@ describe("Window", () => {
 		expect(windowEl?.style.border).toBe("2px solid blue");
 	});
 
+	it("renders nothing when window is minimized", () => {
+		const { container } = render(
+			<WindowManagerProvider
+				defaultWindows={[
+					{
+						id: "win-1",
+						title: "Test Window",
+						position: { x: 0, y: 0 },
+						size: { width: 200, height: 100 },
+						zIndex: 1,
+						displayState: "minimized",
+					},
+				]}
+			>
+				<Window id="win-1">
+					<div>Content</div>
+				</Window>
+			</WindowManagerProvider>,
+		);
+
+		expect(container.querySelector("div")).toBeNull();
+	});
+
+	it("renders full size when maximized", () => {
+		render(
+			<WindowManagerProvider
+				defaultWindows={[
+					{
+						id: "win-1",
+						title: "Test Window",
+						position: { x: 100, y: 100 },
+						size: { width: 200, height: 100 },
+						zIndex: 1,
+						displayState: "maximized",
+					},
+				]}
+			>
+				<Window id="win-1">
+					<div data-testid="content">Content</div>
+				</Window>
+			</WindowManagerProvider>,
+		);
+
+		const windowEl = screen.getByTestId("content").parentElement;
+		expect(windowEl).toHaveStyle({
+			width: "100%",
+			height: "100%",
+			top: "0px",
+			left: "0px",
+		});
+	});
+
 	it("calls bringToFront on pointer down", () => {
 		render(
 			<WindowManagerProvider
@@ -123,6 +179,7 @@ describe("Window", () => {
 						position: { x: 0, y: 0 },
 						size: { width: 200, height: 100 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 					{
 						id: "win-2",
@@ -130,6 +187,7 @@ describe("Window", () => {
 						position: { x: 50, y: 50 },
 						size: { width: 200, height: 100 },
 						zIndex: 2,
+						displayState: "normal",
 					},
 				]}
 			>

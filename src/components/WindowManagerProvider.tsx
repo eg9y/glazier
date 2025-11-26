@@ -19,13 +19,6 @@ export function WindowManagerProvider({
 		activeWindowId: defaultWindows[0]?.id ?? null,
 	}));
 
-	const getMaxZIndex = useCallback(() => {
-		if (state.windows.length === 0) {
-			return 0;
-		}
-		return Math.max(...state.windows.map((w) => w.zIndex));
-	}, [state.windows]);
-
 	const openWindow = useCallback((config: WindowConfig) => {
 		setState((prev) => {
 			if (prev.windows.some((w) => w.id === config.id)) {
@@ -35,6 +28,7 @@ export function WindowManagerProvider({
 			const newWindow: WindowState = {
 				...config,
 				zIndex: config.zIndex ?? maxZ + 1,
+				displayState: config.displayState ?? "normal",
 			};
 			return {
 				windows: [...prev.windows, newWindow],
@@ -59,7 +53,12 @@ export function WindowManagerProvider({
 
 	const focusWindow = useCallback((id: string) => {
 		setState((prev) => {
-			if (!prev.windows.some((w) => w.id === id)) {
+			const win = prev.windows.find((w) => w.id === id);
+			if (!win) {
+				return prev;
+			}
+			// Don't focus minimized windows - restore them first
+			if (win.displayState === "minimized") {
 				return prev;
 			}
 			const maxZ = Math.max(...prev.windows.map((w) => w.zIndex));
@@ -108,6 +107,91 @@ export function WindowManagerProvider({
 		});
 	}, []);
 
+	const minimizeWindow = useCallback((id: string) => {
+		setState((prev) => {
+			const win = prev.windows.find((w) => w.id === id);
+			if (!win || win.displayState === "minimized") {
+				return prev;
+			}
+
+			// Find next window to focus (excluding the one being minimized)
+			const otherWindows = prev.windows.filter(
+				(w) => w.id !== id && w.displayState !== "minimized",
+			);
+			const nextActiveId =
+				prev.activeWindowId === id
+					? (otherWindows[otherWindows.length - 1]?.id ?? null)
+					: prev.activeWindowId;
+
+			return {
+				windows: prev.windows.map((w) =>
+					w.id === id ? { ...w, displayState: "minimized" as const } : w,
+				),
+				activeWindowId: nextActiveId,
+			};
+		});
+	}, []);
+
+	const maximizeWindow = useCallback((id: string) => {
+		setState((prev) => {
+			const win = prev.windows.find((w) => w.id === id);
+			if (!win || win.displayState === "maximized") {
+				return prev;
+			}
+
+			const maxZ = Math.max(...prev.windows.map((w) => w.zIndex));
+			return {
+				windows: prev.windows.map((w) =>
+					w.id === id
+						? {
+								...w,
+								displayState: "maximized" as const,
+								previousBounds: { position: w.position, size: w.size },
+								zIndex: maxZ + 1,
+							}
+						: w,
+				),
+				activeWindowId: id,
+			};
+		});
+	}, []);
+
+	const restoreWindow = useCallback((id: string) => {
+		setState((prev) => {
+			const win = prev.windows.find((w) => w.id === id);
+			if (!win || win.displayState === "normal") {
+				return prev;
+			}
+
+			const maxZ = Math.max(...prev.windows.map((w) => w.zIndex));
+			return {
+				windows: prev.windows.map((w) => {
+					if (w.id !== id) {
+						return w;
+					}
+					// Restore from maximized - use previousBounds
+					if (w.displayState === "maximized" && w.previousBounds) {
+						return {
+							...w,
+							displayState: "normal" as const,
+							position: w.previousBounds.position,
+							size: w.previousBounds.size,
+							previousBounds: undefined,
+							zIndex: maxZ + 1,
+						};
+					}
+					// Restore from minimized
+					return {
+						...w,
+						displayState: "normal" as const,
+						zIndex: maxZ + 1,
+					};
+				}),
+				activeWindowId: id,
+			};
+		});
+	}, []);
+
 	const value: WindowManagerContextValue = useMemo(
 		() => ({
 			state,
@@ -117,6 +201,9 @@ export function WindowManagerProvider({
 			updateWindow,
 			bringToFront,
 			sendToBack,
+			minimizeWindow,
+			maximizeWindow,
+			restoreWindow,
 		}),
 		[
 			state,
@@ -126,6 +213,9 @@ export function WindowManagerProvider({
 			updateWindow,
 			bringToFront,
 			sendToBack,
+			minimizeWindow,
+			maximizeWindow,
+			restoreWindow,
 		],
 	);
 

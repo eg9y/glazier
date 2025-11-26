@@ -20,6 +20,7 @@ function createWrapperWithDefaults() {
 						position: { x: 0, y: 0 },
 						size: { width: 200, height: 100 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 					{
 						id: "win-2",
@@ -27,6 +28,7 @@ function createWrapperWithDefaults() {
 						position: { x: 100, y: 100 },
 						size: { width: 200, height: 100 },
 						zIndex: 2,
+						displayState: "normal",
 					},
 				]}
 			>
@@ -278,6 +280,156 @@ describe("useWindowManager", () => {
 			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
 			const win2 = result.current.state.windows.find((w) => w.id === "win-2");
 			expect(win2?.zIndex).toBeLessThan(win1?.zIndex ?? 0);
+		});
+	});
+
+	describe("minimizeWindow", () => {
+		it("sets displayState to minimized", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.minimizeWindow("win-1");
+			});
+
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			expect(win1?.displayState).toBe("minimized");
+		});
+
+		it("updates activeWindowId when minimizing active window", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			expect(result.current.state.activeWindowId).toBe("win-1");
+
+			act(() => {
+				result.current.minimizeWindow("win-1");
+			});
+
+			expect(result.current.state.activeWindowId).toBe("win-2");
+		});
+
+		it("does nothing if already minimized", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.minimizeWindow("win-1");
+			});
+
+			const stateAfterFirst = result.current.state;
+
+			act(() => {
+				result.current.minimizeWindow("win-1");
+			});
+
+			expect(result.current.state).toBe(stateAfterFirst);
+		});
+	});
+
+	describe("maximizeWindow", () => {
+		it("sets displayState to maximized", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.maximizeWindow("win-1");
+			});
+
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			expect(win1?.displayState).toBe("maximized");
+		});
+
+		it("stores previousBounds for restore", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.maximizeWindow("win-1");
+			});
+
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			expect(win1?.previousBounds).toEqual({
+				position: { x: 0, y: 0 },
+				size: { width: 200, height: 100 },
+			});
+		});
+
+		it("brings window to front", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.maximizeWindow("win-1");
+			});
+
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			const win2 = result.current.state.windows.find((w) => w.id === "win-2");
+			expect(win1?.zIndex).toBeGreaterThan(win2?.zIndex ?? 0);
+		});
+	});
+
+	describe("restoreWindow", () => {
+		it("restores from minimized to normal", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.minimizeWindow("win-1");
+			});
+
+			act(() => {
+				result.current.restoreWindow("win-1");
+			});
+
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			expect(win1?.displayState).toBe("normal");
+		});
+
+		it("restores from maximized to normal with previousBounds", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.maximizeWindow("win-1");
+			});
+
+			act(() => {
+				result.current.restoreWindow("win-1");
+			});
+
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			expect(win1?.displayState).toBe("normal");
+			expect(win1?.position).toEqual({ x: 0, y: 0 });
+			expect(win1?.size).toEqual({ width: 200, height: 100 });
+			expect(win1?.previousBounds).toBeUndefined();
+		});
+
+		it("sets as active and brings to front", () => {
+			const { result } = renderHook(() => useWindowManager(), {
+				wrapper: createWrapperWithDefaults(),
+			});
+
+			act(() => {
+				result.current.minimizeWindow("win-1");
+			});
+
+			act(() => {
+				result.current.restoreWindow("win-1");
+			});
+
+			expect(result.current.state.activeWindowId).toBe("win-1");
+			const win1 = result.current.state.windows.find((w) => w.id === "win-1");
+			const win2 = result.current.state.windows.find((w) => w.id === "win-2");
+			expect(win1?.zIndex).toBeGreaterThan(win2?.zIndex ?? 0);
 		});
 	});
 });

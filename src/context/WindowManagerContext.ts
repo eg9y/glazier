@@ -9,6 +9,9 @@ export interface WindowManagerContextValue {
 	updateWindow: (id: string, updates: Partial<WindowState>) => void;
 	bringToFront: (id: string) => void;
 	sendToBack: (id: string) => void;
+	minimizeWindow: (id: string) => void;
+	maximizeWindow: (id: string) => void;
+	restoreWindow: (id: string) => void;
 }
 
 export const WindowManagerContext =

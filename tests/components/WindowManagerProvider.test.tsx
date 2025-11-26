@@ -44,6 +44,7 @@ describe("WindowManagerProvider", () => {
 						position: { x: 0, y: 0 },
 						size: { width: 200, height: 100 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 					{
 						id: "win-2",
@@ -51,6 +52,7 @@ describe("WindowManagerProvider", () => {
 						position: { x: 100, y: 100 },
 						size: { width: 200, height: 100 },
 						zIndex: 2,
+						displayState: "normal",
 					},
 				]}
 			>
@@ -72,6 +74,7 @@ describe("WindowManagerProvider", () => {
 						position: { x: 0, y: 0 },
 						size: { width: 200, height: 100 },
 						zIndex: 1,
+						displayState: "normal",
 					},
 					{
 						id: "second",
@@ -79,6 +82,7 @@ describe("WindowManagerProvider", () => {
 						position: { x: 100, y: 100 },
 						size: { width: 200, height: 100 },
 						zIndex: 2,
+						displayState: "normal",
 					},
 				]}
 			>

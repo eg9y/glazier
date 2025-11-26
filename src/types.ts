@@ -8,12 +8,17 @@ export interface Size {
 	height: number;
 }
 
+export type WindowDisplayState = "normal" | "minimized" | "maximized";
+
 export interface WindowState {
 	id: string;
 	title: string;
 	position: Position;
 	size: Size;
 	zIndex: number;
+	displayState: WindowDisplayState;
+	/** Stored position/size before maximize, used for restore */
+	previousBounds?: { position: Position; size: Size };
 }
 
 export interface WindowManagerState {
@@ -21,4 +26,12 @@ export interface WindowManagerState {
 	activeWindowId: string | null;
 }
 
-export type WindowConfig = Omit<WindowState, "zIndex"> & { zIndex?: number };
+export type WindowConfig = Omit<
+	WindowState,
+	"zIndex" | "displayState" | "previousBounds"
+> & {
+	zIndex?: number;
+	displayState?: WindowDisplayState;
+};
+
+export type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";

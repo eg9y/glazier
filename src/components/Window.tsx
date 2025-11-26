@@ -16,13 +16,24 @@ export function Window({ id, children, className, style }: WindowProps) {
 		return null;
 	}
 
-	const { position, size, zIndex } = windowState;
+	const { position, size, zIndex, displayState } = windowState;
+
+	// Don't render minimized windows
+	if (displayState === "minimized") {
+		return null;
+	}
+
+	const isMaximized = displayState === "maximized";
 
 	const windowStyle: CSSProperties = {
 		position: "absolute",
-		transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-		width: size.width,
-		height: size.height,
+		transform: isMaximized
+			? "none"
+			: `translate3d(${position.x}px, ${position.y}px, 0)`,
+		width: isMaximized ? "100%" : size.width,
+		height: isMaximized ? "100%" : size.height,
+		top: isMaximized ? 0 : undefined,
+		left: isMaximized ? 0 : undefined,
 		zIndex,
 		...style,
 	};
