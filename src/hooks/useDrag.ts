@@ -1,11 +1,9 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
+import type { ContainerBounds } from "../context/WindowManagerContext";
 import type { Position, Size } from "../types";
 
-export interface ContainerBounds {
-	width: number;
-	height: number;
-}
+export type { ContainerBounds };
 
 export interface UseDragOptions {
 	onDragStart?: (position: Position) => void;
@@ -37,7 +35,7 @@ export interface UseDragReturn {
 	};
 }
 
-function constrainPositionToBounds(
+export function constrainPositionToBounds(
 	position: Position,
 	windowSize: Size,
 	container: ContainerBounds,

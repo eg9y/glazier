@@ -4,8 +4,8 @@ import {
 	Taskbar,
 	Window,
 	WindowManagerProvider,
-	useDrag,
 	useResize,
+	useWindowDrag,
 	useWindowManager,
 } from "..";
 
@@ -26,79 +26,14 @@ function TitleBar({
 	onMinimize?: () => void;
 	onMaximize?: () => void;
 }) {
-	const { state, updateWindow } = useWindowManager();
+	const { state } = useWindowManager();
 	const win = state.windows.find((w) => w.id === windowId);
 
 	const titleBarRef = useRef<HTMLDivElement>(null);
 
-	const { isDragging, dragHandleProps } = useDrag({
-		onDrag: (position, delta) => {
-			if (!win) {
-				return;
-			}
-
-			if (win.displayState === "maximized") {
-				const titleBar = titleBarRef.current;
-				if (!titleBar) {
-					return;
-				}
-
-				const windowEl = titleBar.offsetParent as HTMLElement | null;
-				const container = windowEl?.offsetParent as HTMLElement | null;
-				const containerRect = container?.getBoundingClientRect();
-
-				updateWindow(windowId, {
-					displayState: "normal",
-					position: {
-						x: position.x - (containerRect?.left ?? 0) - win.size.width / 2,
-						y:
-							position.y -
-							(containerRect?.top ?? 0) -
-							titleBar.offsetHeight / 2,
-					},
-					previousBounds: undefined,
-				});
-				return;
-			}
-
-			updateWindow(windowId, {
-				position: {
-					x: win.position.x + delta.x,
-					y: win.position.y + delta.y,
-				},
-			});
-		},
-		getBoundsConstraint: () => {
-			if (!win || win.displayState === "maximized") {
-				return null;
-			}
-
-			const titleBar = titleBarRef.current;
-			if (!titleBar) {
-				return null;
-			}
-
-			const windowEl = titleBar.offsetParent as HTMLElement | null;
-			const container = windowEl?.offsetParent as HTMLElement | null;
-
-			if (!container) {
-				return null;
-			}
-
-			return {
-				container: {
-					width: container.clientWidth,
-					height: container.clientHeight,
-				},
-				windowSize: win.size,
-				windowPosition: win.position,
-			};
-		},
-		onConstrainToBounds: (correctedPosition) => {
-			updateWindow(windowId, {
-				position: correctedPosition,
-			});
-		},
+	const { isDragging, dragHandleProps } = useWindowDrag({
+		windowId,
+		dragHandleRef: titleBarRef,
 	});
 
 	return (
@@ -373,9 +308,12 @@ function SimpleTaskbar() {
 }
 
 const Template: StoryFn = () => {
+	const containerRef = useRef<HTMLDivElement>(null);
+
 	return (
-		<WindowManagerProvider>
+		<WindowManagerProvider boundsRef={containerRef}>
 			<div
+				ref={containerRef}
 				style={{
 					position: "relative",
 					width: "100%",
@@ -395,8 +333,11 @@ const Template: StoryFn = () => {
 export const Default = Template.bind({});
 
 const WithDefaultWindowsTemplate: StoryFn = () => {
+	const containerRef = useRef<HTMLDivElement>(null);
+
 	return (
 		<WindowManagerProvider
+			boundsRef={containerRef}
 			defaultWindows={[
 				{
 					id: "window-1",
@@ -417,6 +358,7 @@ const WithDefaultWindowsTemplate: StoryFn = () => {
 			]}
 		>
 			<div
+				ref={containerRef}
 				style={{
 					position: "relative",
 					width: "100%",

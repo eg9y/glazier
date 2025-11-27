@@ -1,5 +1,12 @@
-import { type ReactNode, useCallback, useMemo, useState } from "react";
 import {
+	type ReactNode,
+	type RefObject,
+	useCallback,
+	useMemo,
+	useState,
+} from "react";
+import {
+	type ContainerBounds,
 	WindowManagerContext,
 	type WindowManagerContextValue,
 } from "../context/WindowManagerContext";
@@ -8,11 +15,14 @@ import type { WindowConfig, WindowManagerState, WindowState } from "../types";
 export interface WindowManagerProviderProps {
 	children: ReactNode;
 	defaultWindows?: WindowState[];
+	/** Ref to container element for bounds constraints. If provided, windows will be constrained within this container. */
+	boundsRef?: RefObject<HTMLElement | null>;
 }
 
 export function WindowManagerProvider({
 	children,
 	defaultWindows = [],
+	boundsRef,
 }: WindowManagerProviderProps) {
 	const [state, setState] = useState<WindowManagerState>(() => ({
 		windows: defaultWindows,
@@ -192,6 +202,16 @@ export function WindowManagerProvider({
 		});
 	}, []);
 
+	const getContainerBounds = useCallback((): ContainerBounds | null => {
+		if (!boundsRef?.current) {
+			return null;
+		}
+		return {
+			width: boundsRef.current.clientWidth,
+			height: boundsRef.current.clientHeight,
+		};
+	}, [boundsRef]);
+
 	const value: WindowManagerContextValue = useMemo(
 		() => ({
 			state,
@@ -204,6 +224,8 @@ export function WindowManagerProvider({
 			minimizeWindow,
 			maximizeWindow,
 			restoreWindow,
+			boundsRef: boundsRef ?? null,
+			getContainerBounds,
 		}),
 		[
 			state,
@@ -216,6 +238,8 @@ export function WindowManagerProvider({
 			minimizeWindow,
 			maximizeWindow,
 			restoreWindow,
+			boundsRef,
+			getContainerBounds,
 		],
 	);
 

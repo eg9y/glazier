@@ -25,12 +25,17 @@ export type { TaskbarProps, TaskbarRenderProps } from "./components/Taskbar";
 export { useWindowManager } from "./hooks/useWindowManager";
 export { useWindow } from "./hooks/useWindow";
 export type { UseWindowReturn } from "./hooks/useWindow";
-export { useDrag } from "./hooks/useDrag";
+export { useDrag, constrainPositionToBounds } from "./hooks/useDrag";
 export type {
 	UseDragOptions,
 	UseDragReturn,
 	ContainerBounds,
 } from "./hooks/useDrag";
+export { useWindowDrag } from "./hooks/useWindowDrag";
+export type {
+	UseWindowDragOptions,
+	UseWindowDragReturn,
+} from "./hooks/useWindowDrag";
 export { useResize } from "./hooks/useResize";
 export type { UseResizeOptions, UseResizeReturn } from "./hooks/useResize";
 
