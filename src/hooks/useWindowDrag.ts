@@ -1,19 +1,31 @@
 import type React from "react";
 import type { RefObject } from "react";
-import { useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Position } from "../types";
 import { useDrag } from "./useDrag";
 import { useWindowManager } from "./useWindowManager";
+
+export type SnapZone = "left" | "right";
 
 export interface UseWindowDragOptions {
 	windowId: string;
 	dragHandleRef: RefObject<HTMLElement | null>;
 	/** Disable the automatic maximized drag-to-restore behavior. Default: false */
 	disableMaximizedDragRestore?: boolean;
+	/** Enable double-click on drag handle to toggle maximize. Default: false */
+	enableDoubleClickMaximize?: boolean;
+	/** Enable snap-to-edges behavior. Default: false */
+	enableSnapToEdges?: boolean;
+	/** Called when entering a snap zone during drag */
+	onSnapZoneEnter?: (zone: SnapZone) => void;
+	/** Called when leaving a snap zone during drag */
+	onSnapZoneLeave?: () => void;
 }
 
 export interface UseWindowDragReturn {
 	isDragging: boolean;
+	/** The currently active snap zone, or null if not in a snap zone */
+	activeSnapZone: SnapZone | null;
 	dragHandleProps: {
 		onPointerDown: (e: React.PointerEvent<Element>) => void;
 		onPointerMove: (e: React.PointerEvent<Element>) => void;
@@ -22,17 +34,39 @@ export interface UseWindowDragReturn {
 	};
 }
 
+const DOUBLE_CLICK_THRESHOLD = 300; // milliseconds
+const SNAP_EDGE_THRESHOLD = 50; // pixels from edge
+
 export function useWindowDrag({
 	windowId,
 	dragHandleRef,
 	disableMaximizedDragRestore = false,
+	enableDoubleClickMaximize = false,
+	enableSnapToEdges = false,
+	onSnapZoneEnter,
+	onSnapZoneLeave,
 }: UseWindowDragOptions): UseWindowDragReturn {
-	const { state, updateWindow, getContainerBounds, boundsRef } =
-		useWindowManager();
+	const {
+		state,
+		updateWindow,
+		getContainerBounds,
+		boundsRef,
+		maximizeWindow,
+		restoreWindow,
+	} = useWindowManager();
 	const win = state.windows.find((w) => w.id === windowId);
 
 	// Track if we just restored from maximized to avoid double-moving
 	const justRestoredRef = useRef(false);
+
+	// Double-click detection
+	const lastClickTimeRef = useRef<number>(0);
+
+	// Snap zone state
+	const [activeSnapZone, setActiveSnapZone] = useState<SnapZone | null>(null);
+	const previousSnapZoneRef = useRef<SnapZone | null>(null);
+	// Track if snap action occurred to skip bounds constraint
+	const didSnapRef = useRef(false);
 
 	const { isDragging, dragHandleProps } = useDrag({
 		onDrag: (position: Position, delta: Position) => {
@@ -91,8 +125,78 @@ export function useWindowDrag({
 					y: win.position.y + delta.y,
 				},
 			});
+
+			// Snap zone detection
+			if (enableSnapToEdges && win.displayState !== "maximized") {
+				const containerBounds = getContainerBounds();
+				const containerEl = boundsRef?.current;
+
+				if (containerBounds && containerEl) {
+					const containerRect = containerEl.getBoundingClientRect();
+					const cursorX = position.x - containerRect.left;
+
+					let newZone: SnapZone | null = null;
+
+					if (cursorX <= SNAP_EDGE_THRESHOLD) {
+						newZone = "left";
+					} else if (cursorX >= containerBounds.width - SNAP_EDGE_THRESHOLD) {
+						newZone = "right";
+					}
+
+					if (newZone !== previousSnapZoneRef.current) {
+						if (newZone) {
+							onSnapZoneEnter?.(newZone);
+						} else {
+							onSnapZoneLeave?.();
+						}
+						previousSnapZoneRef.current = newZone;
+						setActiveSnapZone(newZone);
+					}
+				}
+			}
+		},
+		onDragEnd: () => {
+			// Reset snap flag
+			didSnapRef.current = false;
+
+			// Handle snap action - use ref to get current value (state would be stale)
+			const snapZone = previousSnapZoneRef.current;
+			if (enableSnapToEdges && snapZone && win) {
+				const containerBounds = getContainerBounds();
+				if (containerBounds) {
+					const halfWidth = containerBounds.width / 2;
+					const snapPosition =
+						snapZone === "left" ? { x: 0, y: 0 } : { x: halfWidth, y: 0 };
+					const snapSize = {
+						width: halfWidth,
+						height: containerBounds.height,
+					};
+
+					updateWindow(windowId, {
+						position: snapPosition,
+						size: snapSize,
+						previousBounds:
+							win.displayState === "normal"
+								? { position: win.position, size: win.size }
+								: win.previousBounds,
+					});
+
+					// Mark that snap occurred so bounds constraint is skipped
+					didSnapRef.current = true;
+				}
+			}
+
+			// Clear snap zone state
+			setActiveSnapZone(null);
+			previousSnapZoneRef.current = null;
+			onSnapZoneLeave?.();
 		},
 		getBoundsConstraint: () => {
+			// Skip bounds constraint if a snap action occurred (snap sets its own position)
+			if (didSnapRef.current) {
+				return null;
+			}
+
 			if (!win || win.displayState === "maximized") {
 				return null;
 			}
@@ -115,8 +219,43 @@ export function useWindowDrag({
 		},
 	});
 
+	// Wrap onPointerDown to handle double-click
+	const handlePointerDown = useCallback(
+		(e: React.PointerEvent<Element>) => {
+			if (enableDoubleClickMaximize && win) {
+				const now = Date.now();
+				if (now - lastClickTimeRef.current < DOUBLE_CLICK_THRESHOLD) {
+					// Double-click detected - toggle maximize
+					if (win.displayState === "maximized") {
+						restoreWindow(windowId);
+					} else if (win.displayState === "normal") {
+						maximizeWindow(windowId);
+					}
+					lastClickTimeRef.current = 0;
+					return; // Don't start drag
+				}
+				lastClickTimeRef.current = now;
+			}
+
+			// Call original onPointerDown
+			dragHandleProps.onPointerDown(e);
+		},
+		[
+			enableDoubleClickMaximize,
+			win,
+			windowId,
+			maximizeWindow,
+			restoreWindow,
+			dragHandleProps,
+		],
+	);
+
 	return {
 		isDragging,
-		dragHandleProps,
+		activeSnapZone,
+		dragHandleProps: {
+			...dragHandleProps,
+			onPointerDown: handlePointerDown,
+		},
 	};
 }

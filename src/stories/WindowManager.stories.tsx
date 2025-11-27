@@ -1,6 +1,7 @@
 import type { Meta, StoryFn } from "@storybook/react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
+	SnapPreviewOverlay,
 	Taskbar,
 	Window,
 	WindowManagerProvider,
@@ -8,6 +9,7 @@ import {
 	useWindowDrag,
 	useWindowManager,
 } from "..";
+import type { SnapZone } from "..";
 
 export default {
 	title: "WindowManager",
@@ -19,12 +21,16 @@ function TitleBar({
 	onClose,
 	onMinimize,
 	onMaximize,
+	onSnapZoneEnter,
+	onSnapZoneLeave,
 }: {
 	windowId: string;
 	title: string;
 	onClose: () => void;
 	onMinimize?: () => void;
 	onMaximize?: () => void;
+	onSnapZoneEnter?: (zone: SnapZone) => void;
+	onSnapZoneLeave?: () => void;
 }) {
 	const { state } = useWindowManager();
 	const win = state.windows.find((w) => w.id === windowId);
@@ -34,6 +40,10 @@ function TitleBar({
 	const { isDragging, dragHandleProps } = useWindowDrag({
 		windowId,
 		dragHandleRef: titleBarRef,
+		enableDoubleClickMaximize: true,
+		enableSnapToEdges: true,
+		onSnapZoneEnter,
+		onSnapZoneLeave,
 	});
 
 	return (
@@ -115,7 +125,15 @@ function TitleBar({
 	);
 }
 
-function ResizableWindow({ windowId }: { windowId: string }) {
+function ResizableWindow({
+	windowId,
+	onSnapZoneEnter,
+	onSnapZoneLeave,
+}: {
+	windowId: string;
+	onSnapZoneEnter?: (zone: SnapZone) => void;
+	onSnapZoneLeave?: () => void;
+}) {
 	const {
 		state,
 		updateWindow,
@@ -165,6 +183,8 @@ function ResizableWindow({ windowId }: { windowId: string }) {
 				onMaximize={() =>
 					isMaximized ? restoreWindow(windowId) : maximizeWindow(windowId)
 				}
+				onSnapZoneEnter={onSnapZoneEnter}
+				onSnapZoneLeave={onSnapZoneLeave}
 			/>
 			<div style={{ padding: "16px", flex: 1 }}>
 				Window content for {win.title}
@@ -214,13 +234,24 @@ function ResizableWindow({ windowId }: { windowId: string }) {
 	);
 }
 
-function WindowList() {
+function WindowList({
+	onSnapZoneEnter,
+	onSnapZoneLeave,
+}: {
+	onSnapZoneEnter?: (zone: SnapZone) => void;
+	onSnapZoneLeave?: () => void;
+}) {
 	const { state } = useWindowManager();
 
 	return (
 		<>
 			{state.windows.map((win) => (
-				<ResizableWindow key={win.id} windowId={win.id} />
+				<ResizableWindow
+					key={win.id}
+					windowId={win.id}
+					onSnapZoneEnter={onSnapZoneEnter}
+					onSnapZoneLeave={onSnapZoneLeave}
+				/>
 			))}
 		</>
 	);
@@ -309,6 +340,7 @@ function SimpleTaskbar() {
 
 const Template: StoryFn = () => {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
 
 	return (
 		<WindowManagerProvider boundsRef={containerRef}>
@@ -323,7 +355,11 @@ const Template: StoryFn = () => {
 				}}
 			>
 				<LaunchButtons />
-				<WindowList />
+				<WindowList
+					onSnapZoneEnter={setSnapZone}
+					onSnapZoneLeave={() => setSnapZone(null)}
+				/>
+				<SnapPreviewOverlay zone={snapZone} />
 				<SimpleTaskbar />
 			</div>
 		</WindowManagerProvider>
@@ -334,6 +370,7 @@ export const Default = Template.bind({});
 
 const WithDefaultWindowsTemplate: StoryFn = () => {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
 
 	return (
 		<WindowManagerProvider
@@ -368,7 +405,11 @@ const WithDefaultWindowsTemplate: StoryFn = () => {
 				}}
 			>
 				<LaunchButtons />
-				<WindowList />
+				<WindowList
+					onSnapZoneEnter={setSnapZone}
+					onSnapZoneLeave={() => setSnapZone(null)}
+				/>
+				<SnapPreviewOverlay zone={snapZone} />
 				<SimpleTaskbar />
 			</div>
 		</WindowManagerProvider>
