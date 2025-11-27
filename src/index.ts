@@ -26,7 +26,11 @@ export { useWindowManager } from "./hooks/useWindowManager";
 export { useWindow } from "./hooks/useWindow";
 export type { UseWindowReturn } from "./hooks/useWindow";
 export { useDrag } from "./hooks/useDrag";
-export type { UseDragOptions, UseDragReturn } from "./hooks/useDrag";
+export type {
+	UseDragOptions,
+	UseDragReturn,
+	ContainerBounds,
+} from "./hooks/useDrag";
 export { useResize } from "./hooks/useResize";
 export type { UseResizeOptions, UseResizeReturn } from "./hooks/useResize";
 

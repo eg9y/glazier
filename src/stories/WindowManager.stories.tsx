@@ -68,6 +68,37 @@ function TitleBar({
 				},
 			});
 		},
+		getBoundsConstraint: () => {
+			if (!win || win.displayState === "maximized") {
+				return null;
+			}
+
+			const titleBar = titleBarRef.current;
+			if (!titleBar) {
+				return null;
+			}
+
+			const windowEl = titleBar.offsetParent as HTMLElement | null;
+			const container = windowEl?.offsetParent as HTMLElement | null;
+
+			if (!container) {
+				return null;
+			}
+
+			return {
+				container: {
+					width: container.clientWidth,
+					height: container.clientHeight,
+				},
+				windowSize: win.size,
+				windowPosition: win.position,
+			};
+		},
+		onConstrainToBounds: (correctedPosition) => {
+			updateWindow(windowId, {
+				position: correctedPosition,
+			});
+		},
 	});
 
 	return (

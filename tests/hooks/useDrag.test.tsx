@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useDrag } from "../../src";
+import type { UseDragOptions } from "../../src";
 
 describe("useDrag", () => {
 	it("returns isDragging as false initially", () => {
@@ -222,5 +223,107 @@ describe("useDrag", () => {
 			{ x: 120, y: 115 },
 			{ x: 10, y: 10 },
 		);
+	});
+
+	describe("bounds constraint", () => {
+		const createDragSequence = (options: UseDragOptions) => {
+			const { result } = renderHook(() => useDrag(options));
+
+			const pointerDown = () => {
+				act(() => {
+					result.current.dragHandleProps.onPointerDown({
+						clientX: 100,
+						clientY: 100,
+						pointerId: 1,
+						currentTarget: { setPointerCapture: vi.fn() },
+					} as unknown as React.PointerEvent<Element>);
+				});
+			};
+
+			const pointerUp = () => {
+				act(() => {
+					result.current.dragHandleProps.onPointerUp({
+						clientX: 150,
+						clientY: 150,
+						pointerId: 1,
+						currentTarget: { releasePointerCapture: vi.fn() },
+					} as unknown as React.PointerEvent<Element>);
+				});
+			};
+
+			return { pointerDown, pointerUp };
+		};
+
+		it("calls onConstrainToBounds when window is outside container", () => {
+			const onConstrainToBounds = vi.fn();
+			const getBoundsConstraint = vi.fn().mockReturnValue({
+				container: { width: 800, height: 600 },
+				windowSize: { width: 200, height: 150 },
+				windowPosition: { x: 700, y: 500 }, // Right and bottom edges overflow
+			});
+
+			const { pointerDown, pointerUp } = createDragSequence({
+				getBoundsConstraint,
+				onConstrainToBounds,
+			});
+
+			pointerDown();
+			pointerUp();
+
+			expect(onConstrainToBounds).toHaveBeenCalledWith({ x: 600, y: 450 });
+		});
+
+		it("does not call onConstrainToBounds when window is within bounds", () => {
+			const onConstrainToBounds = vi.fn();
+			const getBoundsConstraint = vi.fn().mockReturnValue({
+				container: { width: 800, height: 600 },
+				windowSize: { width: 200, height: 150 },
+				windowPosition: { x: 100, y: 100 }, // Fully within bounds
+			});
+
+			const { pointerDown, pointerUp } = createDragSequence({
+				getBoundsConstraint,
+				onConstrainToBounds,
+			});
+
+			pointerDown();
+			pointerUp();
+
+			expect(onConstrainToBounds).not.toHaveBeenCalled();
+		});
+
+		it("constrains negative positions to zero", () => {
+			const onConstrainToBounds = vi.fn();
+			const getBoundsConstraint = vi.fn().mockReturnValue({
+				container: { width: 800, height: 600 },
+				windowSize: { width: 200, height: 150 },
+				windowPosition: { x: -50, y: -30 },
+			});
+
+			const { pointerDown, pointerUp } = createDragSequence({
+				getBoundsConstraint,
+				onConstrainToBounds,
+			});
+
+			pointerDown();
+			pointerUp();
+
+			expect(onConstrainToBounds).toHaveBeenCalledWith({ x: 0, y: 0 });
+		});
+
+		it("does nothing when getBoundsConstraint returns null", () => {
+			const onConstrainToBounds = vi.fn();
+			const getBoundsConstraint = vi.fn().mockReturnValue(null);
+
+			const { pointerDown, pointerUp } = createDragSequence({
+				getBoundsConstraint,
+				onConstrainToBounds,
+			});
+
+			pointerDown();
+			pointerUp();
+
+			expect(onConstrainToBounds).not.toHaveBeenCalled();
+		});
 	});
 });

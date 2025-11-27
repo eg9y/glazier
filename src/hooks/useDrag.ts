@@ -1,11 +1,30 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
-import type { Position } from "../types";
+import type { Position, Size } from "../types";
+
+export interface ContainerBounds {
+	width: number;
+	height: number;
+}
 
 export interface UseDragOptions {
 	onDragStart?: (position: Position) => void;
 	onDrag?: (position: Position, delta: Position) => void;
 	onDragEnd?: (position: Position) => void;
+	/**
+	 * If provided, the window will be repositioned back into bounds when drag ends.
+	 * Should return the current container bounds and window size/position.
+	 */
+	getBoundsConstraint?: () => {
+		container: ContainerBounds;
+		windowSize: Size;
+		windowPosition: Position;
+	} | null;
+	/**
+	 * Called when the window position needs to be corrected to stay within bounds.
+	 * Only called if getBoundsConstraint is provided and the window is out of bounds.
+	 */
+	onConstrainToBounds?: (correctedPosition: Position) => void;
 }
 
 export interface UseDragReturn {
@@ -18,8 +37,49 @@ export interface UseDragReturn {
 	};
 }
 
+function constrainPositionToBounds(
+	position: Position,
+	windowSize: Size,
+	container: ContainerBounds,
+): Position {
+	let { x, y } = position;
+
+	// Constrain left edge
+	if (x < 0) {
+		x = 0;
+	}
+	// Constrain right edge
+	if (x + windowSize.width > container.width) {
+		x = container.width - windowSize.width;
+	}
+	// Constrain top edge
+	if (y < 0) {
+		y = 0;
+	}
+	// Constrain bottom edge
+	if (y + windowSize.height > container.height) {
+		y = container.height - windowSize.height;
+	}
+
+	// Handle case where window is larger than container
+	if (windowSize.width > container.width) {
+		x = 0;
+	}
+	if (windowSize.height > container.height) {
+		y = 0;
+	}
+
+	return { x, y };
+}
+
 export function useDrag(options: UseDragOptions = {}): UseDragReturn {
-	const { onDragStart, onDrag, onDragEnd } = options;
+	const {
+		onDragStart,
+		onDrag,
+		onDragEnd,
+		getBoundsConstraint,
+		onConstrainToBounds,
+	} = options;
 	const [isDragging, setIsDragging] = useState(false);
 	const startPos = useRef<Position>({ x: 0, y: 0 });
 	const lastPos = useRef<Position>({ x: 0, y: 0 });
@@ -71,8 +131,28 @@ export function useDrag(options: UseDragOptions = {}): UseDragReturn {
 			setIsDragging(false);
 			const pos = { x: e.clientX, y: e.clientY };
 			onDragEnd?.(pos);
+
+			// Check bounds constraint and reposition if needed
+			if (getBoundsConstraint && onConstrainToBounds) {
+				const constraint = getBoundsConstraint();
+				if (constraint) {
+					const { container, windowSize, windowPosition } = constraint;
+					const correctedPosition = constrainPositionToBounds(
+						windowPosition,
+						windowSize,
+						container,
+					);
+					// Only call if position changed
+					if (
+						correctedPosition.x !== windowPosition.x ||
+						correctedPosition.y !== windowPosition.y
+					) {
+						onConstrainToBounds(correctedPosition);
+					}
+				}
+			}
 		},
-		[onDragEnd],
+		[onDragEnd, getBoundsConstraint, onConstrainToBounds],
 	);
 
 	return {
