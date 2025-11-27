@@ -1,7 +1,8 @@
 import type React from "react";
 import type { RefObject } from "react";
 import { useCallback, useRef, useState } from "react";
-import type { Position } from "../types";
+import type { ContainerBounds } from "../context/WindowManagerContext";
+import type { Position, WindowState } from "../types";
 import { useDrag } from "./useDrag";
 import { useWindowManager } from "./useWindowManager";
 
@@ -37,6 +38,56 @@ export interface UseWindowDragReturn {
 const DOUBLE_CLICK_THRESHOLD = 300; // milliseconds
 const SNAP_EDGE_THRESHOLD = 50; // pixels from edge
 
+/** Detect which snap zone the cursor is in based on position */
+function detectSnapZone(
+	cursorX: number,
+	containerWidth: number,
+): SnapZone | null {
+	if (cursorX <= SNAP_EDGE_THRESHOLD) {
+		return "left";
+	}
+	if (cursorX >= containerWidth - SNAP_EDGE_THRESHOLD) {
+		return "right";
+	}
+	return null;
+}
+
+/** Calculate restored position when dragging a maximized window */
+function calculateRestoredPosition(
+	position: Position,
+	win: WindowState,
+	dragHandle: HTMLElement,
+	containerRect: DOMRect | undefined,
+): { position: Position; size: { width: number; height: number } } {
+	const handleRect = dragHandle.getBoundingClientRect();
+	const cursorPercent = (position.x - handleRect.left) / handleRect.width;
+
+	const restoredWidth = win.previousBounds?.size.width ?? win.size.width;
+	const restoredHeight = win.previousBounds?.size.height ?? win.size.height;
+
+	const newX =
+		position.x - (containerRect?.left ?? 0) - restoredWidth * cursorPercent;
+	const newY =
+		position.y - (containerRect?.top ?? 0) - dragHandle.offsetHeight / 2;
+
+	return {
+		position: { x: newX, y: newY },
+		size: { width: restoredWidth, height: restoredHeight },
+	};
+}
+
+/** Calculate snap position and size for a given snap zone */
+function calculateSnapBounds(
+	snapZone: SnapZone,
+	containerBounds: ContainerBounds,
+): { position: Position; size: { width: number; height: number } } {
+	const halfWidth = containerBounds.width / 2;
+	return {
+		position: snapZone === "left" ? { x: 0, y: 0 } : { x: halfWidth, y: 0 },
+		size: { width: halfWidth, height: containerBounds.height },
+	};
+}
+
 export function useWindowDrag({
 	windowId,
 	dragHandleRef,
@@ -68,6 +119,87 @@ export function useWindowDrag({
 	// Track if snap action occurred to skip bounds constraint
 	const didSnapRef = useRef(false);
 
+	// Handle maximized window drag-to-restore
+	const handleMaximizedDrag = useCallback(
+		(position: Position): boolean => {
+			if (
+				!win ||
+				win.displayState !== "maximized" ||
+				disableMaximizedDragRestore
+			) {
+				return false;
+			}
+
+			const dragHandle = dragHandleRef.current;
+			if (!dragHandle) {
+				return false;
+			}
+
+			const containerRect = boundsRef?.current?.getBoundingClientRect();
+			const restored = calculateRestoredPosition(
+				position,
+				win,
+				dragHandle,
+				containerRect,
+			);
+
+			updateWindow(windowId, {
+				displayState: "normal",
+				position: restored.position,
+				size: restored.size,
+				previousBounds: undefined,
+			});
+
+			justRestoredRef.current = true;
+			return true;
+		},
+		[
+			win,
+			disableMaximizedDragRestore,
+			dragHandleRef,
+			boundsRef,
+			updateWindow,
+			windowId,
+		],
+	);
+
+	// Handle snap zone detection during drag
+	const handleSnapZoneDetection = useCallback(
+		(position: Position) => {
+			if (!(enableSnapToEdges && win) || win.displayState === "maximized") {
+				return;
+			}
+
+			const containerBounds = getContainerBounds();
+			const containerEl = boundsRef?.current;
+			if (!(containerBounds && containerEl)) {
+				return;
+			}
+
+			const containerRect = containerEl.getBoundingClientRect();
+			const cursorX = position.x - containerRect.left;
+			const newZone = detectSnapZone(cursorX, containerBounds.width);
+
+			if (newZone !== previousSnapZoneRef.current) {
+				if (newZone) {
+					onSnapZoneEnter?.(newZone);
+				} else {
+					onSnapZoneLeave?.();
+				}
+				previousSnapZoneRef.current = newZone;
+				setActiveSnapZone(newZone);
+			}
+		},
+		[
+			enableSnapToEdges,
+			win,
+			getContainerBounds,
+			boundsRef,
+			onSnapZoneEnter,
+			onSnapZoneLeave,
+		],
+	);
+
 	const { isDragging, dragHandleProps } = useDrag({
 		onDrag: (position: Position, delta: Position) => {
 			if (!win) {
@@ -75,40 +207,7 @@ export function useWindowDrag({
 			}
 
 			// Handle maximized drag-to-restore
-			if (win.displayState === "maximized" && !disableMaximizedDragRestore) {
-				const dragHandle = dragHandleRef.current;
-				if (!dragHandle) {
-					return;
-				}
-
-				const containerEl = boundsRef?.current;
-				const containerRect = containerEl?.getBoundingClientRect();
-
-				// Calculate cursor percentage within the drag handle
-				const handleRect = dragHandle.getBoundingClientRect();
-				const cursorPercent = (position.x - handleRect.left) / handleRect.width;
-
-				// Get restored window size (from previousBounds or current size)
-				const restoredWidth = win.previousBounds?.size.width ?? win.size.width;
-				const restoredHeight =
-					win.previousBounds?.size.height ?? win.size.height;
-
-				// Calculate new position based on cursor percentage
-				const newX =
-					position.x -
-					(containerRect?.left ?? 0) -
-					restoredWidth * cursorPercent;
-				const newY =
-					position.y - (containerRect?.top ?? 0) - dragHandle.offsetHeight / 2;
-
-				updateWindow(windowId, {
-					displayState: "normal",
-					position: { x: newX, y: newY },
-					size: { width: restoredWidth, height: restoredHeight },
-					previousBounds: undefined,
-				});
-
-				justRestoredRef.current = true;
+			if (handleMaximizedDrag(position)) {
 				return;
 			}
 
@@ -127,33 +226,7 @@ export function useWindowDrag({
 			});
 
 			// Snap zone detection
-			if (enableSnapToEdges && win.displayState !== "maximized") {
-				const containerBounds = getContainerBounds();
-				const containerEl = boundsRef?.current;
-
-				if (containerBounds && containerEl) {
-					const containerRect = containerEl.getBoundingClientRect();
-					const cursorX = position.x - containerRect.left;
-
-					let newZone: SnapZone | null = null;
-
-					if (cursorX <= SNAP_EDGE_THRESHOLD) {
-						newZone = "left";
-					} else if (cursorX >= containerBounds.width - SNAP_EDGE_THRESHOLD) {
-						newZone = "right";
-					}
-
-					if (newZone !== previousSnapZoneRef.current) {
-						if (newZone) {
-							onSnapZoneEnter?.(newZone);
-						} else {
-							onSnapZoneLeave?.();
-						}
-						previousSnapZoneRef.current = newZone;
-						setActiveSnapZone(newZone);
-					}
-				}
-			}
+			handleSnapZoneDetection(position);
 		},
 		onDragEnd: () => {
 			// Reset snap flag
@@ -164,17 +237,11 @@ export function useWindowDrag({
 			if (enableSnapToEdges && snapZone && win) {
 				const containerBounds = getContainerBounds();
 				if (containerBounds) {
-					const halfWidth = containerBounds.width / 2;
-					const snapPosition =
-						snapZone === "left" ? { x: 0, y: 0 } : { x: halfWidth, y: 0 };
-					const snapSize = {
-						width: halfWidth,
-						height: containerBounds.height,
-					};
+					const snapBounds = calculateSnapBounds(snapZone, containerBounds);
 
 					updateWindow(windowId, {
-						position: snapPosition,
-						size: snapSize,
+						position: snapBounds.position,
+						size: snapBounds.size,
 						previousBounds:
 							win.displayState === "normal"
 								? { position: win.position, size: win.size }
