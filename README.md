@@ -4,12 +4,13 @@
 [![npm bundle size](https://img.shields.io/bundlephobia/minzip/glazier)](https://bundlephobia.com/package/glazier)
 [![license](https://img.shields.io/npm/l/glazier.svg)](https://github.com/eg9y/glazier/blob/main/LICENSE)
 
+
 > Headless React window management primitives
 
 <!-- TODO: Add demo GIF -->
 <!-- ![Glazier Demo](./demo.gif) -->
 
-Glazier provides unstyled, fully accessible window management components for React. Build desktop-like interfaces with draggable, resizable windows—bring your own UI.
+Glazier provides unstyled, fully accessible window management components for React. Build desktop-like interfaces with draggable, resizable windows-bring your own UI.
 
 ## Features
 
@@ -21,8 +22,8 @@ Glazier provides unstyled, fully accessible window management components for Rea
 - **Double-click to maximize** (optional)
 - **Bounds constraint** with automatic out-of-bounds reposition
 - **Component registry pattern** for declarative, serializable window state
-- **Headless design** — zero styles included, full control over appearance
-- **TypeScript** — fully typed API
+- **Headless design** - zero styles included, full control over appearance
+- **TypeScript** - fully typed API
 
 ## Installation
 
@@ -114,7 +115,7 @@ function MyWindow({ windowId }: { windowId: string }) {
 
 ### Headless Design
 
-Glazier provides behavior, not appearance. Components handle positioning, state management, and user interactions—you provide all styling. This gives you complete control over the look and feel.
+Glazier provides behavior, not appearance. Components handle positioning, state management, and user interactions-you provide all styling. This gives you complete control over the look and feel.
 
 ### Component Registry Pattern
 
@@ -173,10 +174,10 @@ Auto-renders windows from the registry based on `componentId`.
 | `style` | `CSSProperties` | Optional inline styles |
 
 **DesktopRenderProps:**
-- `Component` — The resolved React component from registry
-- `windowId` — The window's ID
-- `componentProps` — Props to pass to the component
-- `windowState` — Full window state object
+- `Component` - The resolved React component from registry
+- `windowId` - The window's ID
+- `componentProps` - Props to pass to the component
+- `windowState` - Full window state object
 
 ### Taskbar
 
@@ -187,12 +188,12 @@ Headless taskbar component with render props.
 | `children` | `(props: TaskbarRenderProps) => ReactNode` | Render function |
 
 **TaskbarRenderProps:**
-- `windows` — Array of all window states
-- `activeWindowId` — Currently focused window ID
-- `focusWindow(id)` — Focus a window
-- `minimizeWindow(id)` — Minimize a window
-- `restoreWindow(id)` — Restore a minimized window
-- `closeWindow(id)` — Close a window
+- `windows` - Array of all window states
+- `activeWindowId` - Currently focused window ID
+- `focusWindow(id)` - Focus a window
+- `minimizeWindow(id)` - Minimize a window
+- `restoreWindow(id)` - Restore a minimized window
+- `closeWindow(id)` - Close a window
 
 ### SnapPreviewOverlay
 

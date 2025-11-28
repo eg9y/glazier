@@ -9,7 +9,7 @@ export interface WindowProps {
 }
 
 export function Window({ id, children, className, style }: WindowProps) {
-	const { state, bringToFront } = useWindowManager();
+	const { state, focusWindow } = useWindowManager();
 	const windowState = state.windows.find((w) => w.id === id);
 
 	if (!windowState) {
@@ -42,7 +42,7 @@ export function Window({ id, children, className, style }: WindowProps) {
 		<div
 			style={windowStyle}
 			className={className}
-			onPointerDown={() => bringToFront(id)}
+			onPointerDown={() => focusWindow(id)}
 		>
 			{children}
 		</div>

@@ -873,3 +873,360 @@ const ComponentRegistryTemplate: StoryFn = () => {
 };
 
 export const ComponentRegistry = ComponentRegistryTemplate.bind({});
+
+// ============================================
+// Desktop Icons Story
+// ============================================
+
+import { DesktopIconGrid } from "../components/DesktopIconGrid";
+import type { GridConfig, IconState } from "../types";
+
+// Simple icon component for demonstration
+function IconDisplay({
+	label,
+	icon,
+	isSelected,
+	isDragging,
+}: {
+	label: string;
+	icon?: string;
+	isSelected: boolean;
+	isDragging: boolean;
+}) {
+	// Map icon names to emoji for demo purposes
+	const iconEmoji: Record<string, string> = {
+		settings: "\u2699\ufe0f",
+		terminal: "\u{1f4bb}",
+		notes: "\u{1f4dd}",
+		folder: "\u{1f4c1}",
+	};
+
+	return (
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+				gap: "4px",
+				padding: "8px",
+				borderRadius: "4px",
+				background: isSelected ? "rgba(255, 255, 255, 0.3)" : "transparent",
+				opacity: isDragging ? 0.6 : 1,
+				cursor: isDragging ? "grabbing" : "pointer",
+				userSelect: "none",
+				width: "72px",
+			}}
+		>
+			<div
+				style={{
+					fontSize: "32px",
+					lineHeight: 1,
+				}}
+			>
+				{iconEmoji[icon ?? "folder"] ?? iconEmoji.folder}
+			</div>
+			<span
+				style={{
+					color: "white",
+					fontSize: "11px",
+					textAlign: "center",
+					textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
+					wordBreak: "break-word",
+					maxWidth: "100%",
+				}}
+			>
+				{label}
+			</span>
+		</div>
+	);
+}
+
+const DesktopIconsTemplate: StoryFn = () => {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
+
+	const gridConfig: GridConfig = {
+		cellWidth: 80,
+		cellHeight: 90,
+		gap: 8,
+	};
+
+	const defaultIcons: IconState[] = [
+		{
+			id: "settings-icon",
+			label: "Settings",
+			componentId: "settings",
+			position: { x: 0, y: 0 },
+			icon: "settings",
+		},
+		{
+			id: "terminal-icon",
+			label: "Terminal",
+			componentId: "terminal",
+			componentProps: { initialPath: "/home/user" },
+			position: { x: 88, y: 0 },
+			icon: "terminal",
+		},
+		{
+			id: "notes-icon",
+			label: "Notes",
+			componentId: "notes",
+			position: { x: 0, y: 98 },
+			icon: "notes",
+		},
+		{
+			id: "downloads-icon",
+			label: "Downloads",
+			componentId: "terminal",
+			componentProps: { initialPath: "/home/user/Downloads" },
+			position: { x: 88, y: 98 },
+			icon: "folder",
+		},
+	];
+
+	return (
+		<WindowManagerProvider
+			boundsRef={containerRef}
+			registry={appRegistry}
+			defaultIcons={defaultIcons}
+		>
+			<div
+				ref={containerRef}
+				style={{
+					position: "relative",
+					width: "100%",
+					height: "600px",
+					background:
+						"linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+					overflow: "hidden",
+				}}
+			>
+				{/* Desktop Icons */}
+				<DesktopIconGrid
+					grid={gridConfig}
+					snapToGrid={true}
+					style={{
+						position: "absolute",
+						top: "16px",
+						left: "16px",
+						right: "16px",
+						bottom: "56px",
+					}}
+				>
+					{({
+						iconState,
+						pixelPosition,
+						isSelected,
+						isDragging,
+						wasDragged,
+						dragProps,
+						onLaunch,
+					}) => (
+						<div
+							{...dragProps}
+							onClick={(e) => {
+								e.stopPropagation();
+								if (!wasDragged) {
+									onLaunch();
+								}
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									onLaunch();
+								}
+							}}
+							tabIndex={0}
+							// biome-ignore lint/a11y/useSemanticElements: div needed for drag functionality
+							role="button"
+							style={{
+								position: "absolute",
+								left: pixelPosition.x,
+								top: pixelPosition.y,
+								cursor: isDragging ? "grabbing" : "pointer",
+							}}
+						>
+							<IconDisplay
+								label={iconState.label}
+								icon={iconState.icon}
+								isSelected={isSelected}
+								isDragging={isDragging}
+							/>
+						</div>
+					)}
+				</DesktopIconGrid>
+
+				{/* Windows */}
+				<Desktop>
+					{({
+						component: Component,
+						windowId,
+						componentProps,
+						windowState,
+					}) => (
+						<RegistryWindowChrome
+							windowId={windowId}
+							title={windowState.title}
+							onSnapZoneEnter={setSnapZone}
+							onSnapZoneLeave={() => setSnapZone(null)}
+						>
+							<Component windowId={windowId} {...componentProps} />
+						</RegistryWindowChrome>
+					)}
+				</Desktop>
+
+				<SnapPreviewOverlay zone={snapZone} />
+				<SimpleTaskbar />
+			</div>
+		</WindowManagerProvider>
+	);
+};
+
+export const DesktopIcons = DesktopIconsTemplate.bind({});
+
+// ============================================
+// Desktop Icons Without Grid Story
+// ============================================
+
+import { DesktopIcon, useWindowManager as useWM } from "..";
+
+function FreePositionIcons() {
+	const { icons } = useWM();
+
+	return (
+		<div
+			style={{
+				position: "absolute",
+				top: "16px",
+				left: "16px",
+				right: "16px",
+				bottom: "56px",
+			}}
+		>
+			{icons.map((icon) => (
+				<DesktopIcon key={icon.id} id={icon.id}>
+					{({
+						iconState,
+						isSelected,
+						isDragging,
+						wasDragged,
+						dragProps,
+						onLaunch,
+					}) => (
+						<div
+							{...dragProps}
+							onClick={(e) => {
+								e.stopPropagation();
+								if (!wasDragged) {
+									onLaunch();
+								}
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									onLaunch();
+								}
+							}}
+							tabIndex={0}
+							// biome-ignore lint/a11y/useSemanticElements: div needed for drag functionality
+							role="button"
+							style={{
+								position: "absolute",
+								left: iconState.position.x,
+								top: iconState.position.y,
+								cursor: isDragging ? "grabbing" : "pointer",
+							}}
+						>
+							<IconDisplay
+								label={iconState.label}
+								icon={iconState.icon}
+								isSelected={isSelected}
+								isDragging={isDragging}
+							/>
+						</div>
+					)}
+				</DesktopIcon>
+			))}
+		</div>
+	);
+}
+
+const FreePositionIconsTemplate: StoryFn = () => {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
+
+	const defaultIcons: IconState[] = [
+		{
+			id: "settings-icon",
+			label: "Settings",
+			componentId: "settings",
+			position: { x: 20, y: 20 },
+			icon: "settings",
+		},
+		{
+			id: "terminal-icon",
+			label: "Terminal",
+			componentId: "terminal",
+			componentProps: { initialPath: "/home/user" },
+			position: { x: 120, y: 40 },
+			icon: "terminal",
+		},
+		{
+			id: "notes-icon",
+			label: "Notes",
+			componentId: "notes",
+			position: { x: 60, y: 140 },
+			icon: "notes",
+		},
+	];
+
+	return (
+		<WindowManagerProvider
+			boundsRef={containerRef}
+			registry={appRegistry}
+			defaultIcons={defaultIcons}
+		>
+			<div
+				ref={containerRef}
+				style={{
+					position: "relative",
+					width: "100%",
+					height: "600px",
+					background: "linear-gradient(180deg, #2c3e50 0%, #3498db 100%)",
+					overflow: "hidden",
+				}}
+			>
+				<div style={{ padding: "8px 16px" }}>
+					<p style={{ color: "white", fontSize: "12px", margin: 0 }}>
+						Icons can be freely positioned without grid snapping. Drag icons
+						anywhere!
+					</p>
+				</div>
+
+				<FreePositionIcons />
+
+				{/* Windows */}
+				<Desktop>
+					{({
+						component: Component,
+						windowId,
+						componentProps,
+						windowState,
+					}) => (
+						<RegistryWindowChrome
+							windowId={windowId}
+							title={windowState.title}
+							onSnapZoneEnter={setSnapZone}
+							onSnapZoneLeave={() => setSnapZone(null)}
+						>
+							<Component windowId={windowId} {...componentProps} />
+						</RegistryWindowChrome>
+					)}
+				</Desktop>
+
+				<SnapPreviewOverlay zone={snapZone} />
+				<SimpleTaskbar />
+			</div>
+		</WindowManagerProvider>
+	);
+};
+
+export const FreePositionDesktopIcons = FreePositionIconsTemplate.bind({});

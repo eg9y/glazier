@@ -1,41 +1,57 @@
-import {
-	type ReactNode,
-	type RefObject,
-	useCallback,
-	useMemo,
-	useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	type ContainerBounds,
 	WindowManagerContext,
 	type WindowManagerContextValue,
 } from "../context/WindowManagerContext";
 import type {
+	IconConfig,
+	IconState,
 	WindowConfig,
+	WindowManagerProviderProps,
 	WindowManagerState,
-	WindowRegistry,
 	WindowState,
 } from "../types";
-
-export interface WindowManagerProviderProps {
-	children: ReactNode;
-	defaultWindows?: WindowState[];
-	/** Component registry mapping string keys to React components. Required when using Desktop for registry-based rendering. */
-	registry?: WindowRegistry;
-	/** Ref to container element for bounds constraints. If provided, windows will be constrained within this container. */
-	boundsRef?: RefObject<HTMLElement | null>;
-}
+import { generateWindowId } from "../utils/id";
 
 export function WindowManagerProvider({
 	children,
 	defaultWindows = [],
+	defaultIcons = [],
 	registry,
+	defaultWindowConfigs,
 	boundsRef,
+	initialFocusedWindowId,
+	onFocusChange,
 }: WindowManagerProviderProps) {
-	const [state, setState] = useState<WindowManagerState>(() => ({
-		windows: defaultWindows,
-		activeWindowId: defaultWindows[0]?.id ?? null,
-	}));
+	const [state, setState] = useState<WindowManagerState>(() => {
+		// Use initialFocusedWindowId if provided and valid, otherwise fall back to first window
+		const initialFocused =
+			initialFocusedWindowId &&
+			defaultWindows.some((w) => w.id === initialFocusedWindowId)
+				? initialFocusedWindowId
+				: (defaultWindows[0]?.id ?? null);
+
+		return {
+			windows: defaultWindows,
+			activeWindowId: initialFocused,
+		};
+	});
+
+	// Track previous activeWindowId to detect changes
+	const prevActiveWindowIdRef = useRef(state.activeWindowId);
+
+	// Notify when focus changes
+	useEffect(() => {
+		if (prevActiveWindowIdRef.current !== state.activeWindowId) {
+			onFocusChange?.(state.activeWindowId);
+			prevActiveWindowIdRef.current = state.activeWindowId;
+		}
+	}, [state.activeWindowId, onFocusChange]);
+
+	// Icon state
+	const [icons, setIcons] = useState<IconState[]>(defaultIcons);
+	const [selectedIconIds, setSelectedIconIds] = useState<string[]>([]);
 
 	const openWindow = useCallback((config: WindowConfig) => {
 		setState((prev) => {
@@ -220,6 +236,105 @@ export function WindowManagerProvider({
 		};
 	}, [boundsRef]);
 
+	// Icon operations
+	const addIcon = useCallback((config: IconConfig) => {
+		setIcons((prev) => {
+			if (prev.some((icon) => icon.id === config.id)) {
+				return prev;
+			}
+			return [...prev, config];
+		});
+	}, []);
+
+	const removeIcon = useCallback((id: string) => {
+		setIcons((prev) => prev.filter((icon) => icon.id !== id));
+		setSelectedIconIds((prev) => prev.filter((iconId) => iconId !== id));
+	}, []);
+
+	const updateIcon = useCallback((id: string, updates: Partial<IconState>) => {
+		setIcons((prev) =>
+			prev.map((icon) => (icon.id === id ? { ...icon, ...updates } : icon)),
+		);
+	}, []);
+
+	const selectIcon = useCallback((id: string, multiSelect = false) => {
+		setSelectedIconIds((prev) => {
+			if (multiSelect) {
+				// Toggle selection in multi-select mode
+				if (prev.includes(id)) {
+					return prev.filter((iconId) => iconId !== id);
+				}
+				return [...prev, id];
+			}
+			// Single select mode - replace selection
+			return [id];
+		});
+	}, []);
+
+	const deselectIcon = useCallback((id: string) => {
+		setSelectedIconIds((prev) => prev.filter((iconId) => iconId !== id));
+	}, []);
+
+	const deselectAllIcons = useCallback(() => {
+		setSelectedIconIds([]);
+	}, []);
+
+	// Convenience helpers
+	const getWindowByComponentId = useCallback(
+		(componentId: string) =>
+			state.windows.find((w) => w.componentId === componentId),
+		[state.windows],
+	);
+
+	const isWindowOpen = useCallback(
+		(componentId: string) =>
+			state.windows.some((w) => w.componentId === componentId),
+		[state.windows],
+	);
+
+	const launchIcon = useCallback(
+		(id: string) => {
+			const icon = icons.find((i) => i.id === id);
+			if (!icon) {
+				return;
+			}
+
+			// Look up default config for this componentId
+			const defaultConfig = defaultWindowConfigs?.[icon.componentId];
+
+			// Generate a unique window ID based on the icon
+			const windowId = generateWindowId();
+
+			openWindow({
+				id: windowId,
+				title: defaultConfig?.title ?? icon.label,
+				componentId: icon.componentId,
+				componentProps: icon.componentProps,
+				position: defaultConfig?.position ?? { x: 100, y: 100 },
+				size: defaultConfig?.size ?? { width: 400, height: 300 },
+			});
+		},
+		[icons, openWindow, defaultWindowConfigs],
+	);
+
+	const openOrFocusWindow = useCallback(
+		(config: WindowConfig) => {
+			const existing = state.windows.find(
+				(w) => w.componentId === config.componentId,
+			);
+			if (existing) {
+				if (existing.displayState === "minimized") {
+					restoreWindow(existing.id);
+				} else {
+					focusWindow(existing.id);
+				}
+			} else {
+				openWindow(config);
+			}
+		},
+		[state.windows, focusWindow, restoreWindow, openWindow],
+	);
+
 	const value: WindowManagerContextValue = useMemo(
 		() => ({
 			state,
@@ -235,6 +350,20 @@ export function WindowManagerProvider({
 			restoreWindow,
 			boundsRef: boundsRef ?? null,
 			getContainerBounds,
+			// Icon state and operations
+			icons,
+			selectedIconIds,
+			addIcon,
+			removeIcon,
+			updateIcon,
+			selectIcon,
+			deselectIcon,
+			deselectAllIcons,
+			launchIcon,
+			// Convenience helpers
+			getWindowByComponentId,
+			isWindowOpen,
+			openOrFocusWindow,
 		}),
 		[
 			state,
@@ -250,6 +379,18 @@ export function WindowManagerProvider({
 			restoreWindow,
 			boundsRef,
 			getContainerBounds,
+			icons,
+			selectedIconIds,
+			addIcon,
+			removeIcon,
+			updateIcon,
+			selectIcon,
+			deselectIcon,
+			deselectAllIcons,
+			launchIcon,
+			getWindowByComponentId,
+			isWindowOpen,
+			openOrFocusWindow,
 		],
 	);
 

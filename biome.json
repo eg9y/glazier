@@ -6,7 +6,8 @@
 			"**/storybook-static/**",
 			"**/coverage/**",
 			"**/.next/**",
-			"**/node_modules/**"
+			"**/node_modules/**",
+			"**/examples/**"
 		]
 	},
 	"organizeImports": {
