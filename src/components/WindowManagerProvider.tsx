@@ -10,11 +10,18 @@ import {
 	WindowManagerContext,
 	type WindowManagerContextValue,
 } from "../context/WindowManagerContext";
-import type { WindowConfig, WindowManagerState, WindowState } from "../types";
+import type {
+	WindowConfig,
+	WindowManagerState,
+	WindowRegistry,
+	WindowState,
+} from "../types";
 
 export interface WindowManagerProviderProps {
 	children: ReactNode;
 	defaultWindows?: WindowState[];
+	/** Component registry mapping string keys to React components. Required when using Desktop for registry-based rendering. */
+	registry?: WindowRegistry;
 	/** Ref to container element for bounds constraints. If provided, windows will be constrained within this container. */
 	boundsRef?: RefObject<HTMLElement | null>;
 }
@@ -22,6 +29,7 @@ export interface WindowManagerProviderProps {
 export function WindowManagerProvider({
 	children,
 	defaultWindows = [],
+	registry,
 	boundsRef,
 }: WindowManagerProviderProps) {
 	const [state, setState] = useState<WindowManagerState>(() => ({
@@ -215,6 +223,7 @@ export function WindowManagerProvider({
 	const value: WindowManagerContextValue = useMemo(
 		() => ({
 			state,
+			registry: registry ?? null,
 			openWindow,
 			closeWindow,
 			focusWindow,
@@ -229,6 +238,7 @@ export function WindowManagerProvider({
 		}),
 		[
 			state,
+			registry,
 			openWindow,
 			closeWindow,
 			focusWindow,

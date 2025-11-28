@@ -1,6 +1,11 @@
 import type { RefObject } from "react";
 import { createContext } from "react";
-import type { WindowConfig, WindowManagerState, WindowState } from "../types";
+import type {
+	WindowConfig,
+	WindowManagerState,
+	WindowRegistry,
+	WindowState,
+} from "../types";
 
 export interface ContainerBounds {
 	width: number;
@@ -9,6 +14,8 @@ export interface ContainerBounds {
 
 export interface WindowManagerContextValue {
 	state: WindowManagerState;
+	/** The component registry for resolving componentId to components */
+	registry: WindowRegistry | null;
 	openWindow: (config: WindowConfig) => void;
 	closeWindow: (id: string) => void;
 	focusWindow: (id: string) => void;

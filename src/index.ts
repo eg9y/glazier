@@ -7,7 +7,9 @@ export type {
 	WindowConfig,
 	WindowDisplayState,
 	ResizeDirection,
+	WindowRegistry,
 } from "./types";
+export { isRegistryWindowState } from "./types";
 
 // Context
 export { WindowManagerContext } from "./context/WindowManagerContext";
@@ -22,6 +24,8 @@ export { Taskbar } from "./components/Taskbar";
 export type { TaskbarProps, TaskbarRenderProps } from "./components/Taskbar";
 export { SnapPreviewOverlay } from "./components/SnapPreviewOverlay";
 export type { SnapPreviewOverlayProps } from "./components/SnapPreviewOverlay";
+export { Desktop } from "./components/Desktop";
+export type { DesktopProps, DesktopRenderProps } from "./components/Desktop";
 
 // Hooks
 export { useWindowManager } from "./hooks/useWindowManager";
@@ -44,3 +48,5 @@ export type { UseResizeOptions, UseResizeReturn } from "./hooks/useResize";
 
 // Utils
 export { generateWindowId } from "./utils/id";
+export { validateWindowState } from "./utils/validateWindowState";
+export type { ValidationResult } from "./utils/validateWindowState";

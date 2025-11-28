@@ -1,9 +1,9 @@
 {
-	"name": "react-desktop-os",
+	"name": "glazier",
 	"description": "Headless React window management primitives",
 	"version": "0.0.0",
 	"author": "",
-	"license": "",
+	"license": "MIT",
 	"keywords": [],
 	"repository": {
 		"type": "git",
