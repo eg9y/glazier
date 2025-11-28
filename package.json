@@ -2,12 +2,12 @@
 	"name": "glazier",
 	"description": "Headless React window management primitives",
 	"version": "0.0.0",
-	"author": "",
+	"author": "Egan Bisma",
 	"license": "MIT",
 	"keywords": [],
 	"repository": {
 		"type": "git",
-		"url": ""
+		"url": "https://github.com/eg9y/glazier"
 	},
 	"scripts": {
 		"dev": "concurrently \"pnpm build --watch\" \"pnpm storybook\" \"pnpm test\" ",
