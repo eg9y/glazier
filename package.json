@@ -44,7 +44,7 @@
 			"release": true
 		},
 		"npm": {
-			"publish": false
+			"publish": true
 		}
 	},
 	"engines": {

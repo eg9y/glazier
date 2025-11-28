@@ -1,9 +1,8 @@
 # Glazier
 
-<!-- TODO: Add badges after publishing -->
-<!-- [![npm version](https://img.shields.io/npm/v/glazier.svg)](https://www.npmjs.com/package/glazier) -->
-<!-- [![npm bundle size](https://img.shields.io/bundlephobia/minzip/glazier)](https://bundlephobia.com/package/glazier) -->
-<!-- [![license](https://img.shields.io/npm/l/glazier.svg)](https://github.com/your-username/glazier/blob/main/LICENSE) -->
+[![npm version](https://img.shields.io/npm/v/glazier.svg)](https://www.npmjs.com/package/glazier)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/glazier)](https://bundlephobia.com/package/glazier)
+[![license](https://img.shields.io/npm/l/glazier.svg)](https://github.com/eg9y/glazier/blob/main/LICENSE)
 
 > Headless React window management primitives
 
