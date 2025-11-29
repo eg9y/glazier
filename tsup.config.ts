@@ -6,8 +6,8 @@ import { type Options, defineConfig } from "tsup";
 
 const common: Options = {
 	entry: ["src/index.ts"],
-	treeshake: false,
-	sourcemap: "inline",
+	treeshake: true,
+	sourcemap: true,
 	minify: true,
 	clean: true,
 	dts: true,

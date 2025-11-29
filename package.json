@@ -1,7 +1,7 @@
 {
 	"name": "glazier",
 	"description": "Headless React window management primitives",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"author": "Egan Bisma",
 	"license": "MIT",
 	"keywords": [],
