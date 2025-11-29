@@ -30,7 +30,7 @@
 			"import": "./dist/index.mjs"
 		}
 	},
-	"files": ["dist"],
+	"files": ["dist", "!dist/*.map"],
 	"config": {
 		"commitizen": {
 			"path": "./node_modules/@ryansonshine/cz-conventional-changelog"
