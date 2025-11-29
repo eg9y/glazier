@@ -21,6 +21,9 @@ Glazier provides unstyled, fully accessible window management components for Rea
 - **Z-index management** (bring to front, send to back)
 - **Double-click to maximize** (optional)
 - **Bounds constraint** with automatic out-of-bounds reposition
+- **Desktop icons** with grid snapping and drag support
+- **Icon selection** with multi-select capability
+- **Icon-to-window launching** - double-click icons to open/focus windows
 - **Component registry pattern** for declarative, serializable window state
 - **Headless design** - zero styles included, full control over appearance
 - **TypeScript** - fully typed API
@@ -149,8 +152,12 @@ Root provider that manages all window state.
 |------|------|-------------|
 | `children` | `ReactNode` | Child components |
 | `defaultWindows` | `WindowState[]` | Initial windows to render |
+| `defaultIcons` | `IconState[]` | Initial desktop icons |
 | `registry` | `WindowRegistry` | Component registry for Desktop pattern |
+| `defaultWindowConfigs` | `WindowConfigRegistry` | Default window configs by componentId (for icon launches) |
 | `boundsRef` | `RefObject<HTMLElement>` | Container element for bounds constraints |
+| `initialFocusedWindowId` | `string` | Which window to focus initially |
+| `onFocusChange` | `(windowId: string \| null) => void` | Callback when focus changes |
 
 ### Window
 
@@ -203,6 +210,45 @@ Visual preview overlay for snap zones during drag.
 |------|------|-------------|
 | `zone` | `"left" \| "right" \| null` | Active snap zone |
 | `style` | `CSSProperties` | Optional inline styles |
+
+### DesktopIcon
+
+Headless component for individual desktop icons with render props pattern.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `id` | `string` | Icon ID |
+| `children` | `(props: DesktopIconRenderProps) => ReactNode` | Render function |
+| `gridConfig` | `GridConfig` | Optional grid configuration for snapping |
+| `snapOnDrop` | `boolean` | Snap only on drop (default: true) or during drag |
+
+**DesktopIconRenderProps:**
+- `iconId` - Icon ID
+- `iconState` - Full icon state object
+- `isSelected` - Whether icon is selected
+- `isDragging` - Whether icon is being dragged
+- `wasDragged` - Whether icon was moved (use to prevent click after drag)
+- `dragProps` - Props to spread on the icon element
+- `onSelect(multiSelect?)` - Select handler
+- `onLaunch()` - Launch associated window
+
+### DesktopIconGrid
+
+Container that renders all icons with grid awareness.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `children` | `(props: DesktopIconGridRenderProps) => ReactNode` | Render function |
+| `grid` | `GridConfig` | Grid configuration (cellWidth, cellHeight, gap) |
+| `snapToGrid` | `boolean` | Enable grid snapping (default: true) |
+| `className` | `string` | Optional CSS class |
+| `style` | `CSSProperties` | Optional inline styles |
+
+**DesktopIconGridRenderProps** extends DesktopIconRenderProps with:
+- `gridPosition` - `{ row, column }` position in grid
+- `pixelPosition` - Current pixel position
+- `isWindowOpen` - Whether associated window is open
+- `openOrFocus()` - Opens window or focuses if already open
 
 ## Hooks
 
@@ -303,6 +349,37 @@ const { isDragging, dragHandleProps } = useDrag({
 });
 ```
 
+### useDesktopIcon(iconId)
+
+Access and control a single desktop icon.
+
+```tsx
+const {
+  iconState,        // The icon's current state
+  isSelected,       // Whether icon is selected
+  select,           // (multiSelect?: boolean) => void
+  deselect,         // () => void
+  toggleSelect,     // () => void
+  launch,           // () => void - opens associated window
+  updatePosition,   // (position: Position) => void
+} = useDesktopIcon('icon-1');
+```
+
+### useIconDrag(options)
+
+Drag behavior for desktop icons with optional grid snapping.
+
+```tsx
+const { isDragging, wasDragged, dragHandleProps } = useIconDrag({
+  iconId: 'icon-1',
+  gridConfig: { cellWidth: 80, cellHeight: 90, gap: 10 },
+  snapOnDrop: true,  // Snap only when released (default)
+  onDragStart: (position) => {},
+  onDrag: (position) => {},
+  onDragEnd: (position) => {},
+});
+```
+
 ## Types
 
 ```tsx
@@ -328,6 +405,21 @@ type WindowRegistry = Record<string, ComponentType<{ windowId: string }>>;
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
 type SnapZone = 'left' | 'right';
+
+interface IconState {
+  id: string;
+  label: string;
+  componentId: string;        // References WindowRegistry
+  componentProps?: Record<string, unknown>;
+  position: Position;
+  icon?: string;              // Consumer-defined icon identifier
+}
+
+interface GridConfig {
+  cellWidth: number;
+  cellHeight: number;
+  gap?: number;
+}
 ```
 
 ## Examples
@@ -404,6 +496,30 @@ function DesktopWithSnap() {
   );
 }
 ```
+
+### Desktop Icons
+
+```tsx
+<DesktopIconGrid grid={{ cellWidth: 80, cellHeight: 90, gap: 10 }}>
+  {({ iconState, isSelected, dragProps, onSelect, openOrFocus, wasDragged }) => (
+    <div
+      {...dragProps}
+      onClick={() => !wasDragged && onSelect()}
+      onDoubleClick={openOrFocus}
+      style={{
+        position: 'absolute',
+        left: iconState.position.x,
+        top: iconState.position.y,
+        background: isSelected ? '#0066cc33' : 'transparent',
+      }}
+    >
+      {iconState.label}
+    </div>
+  )}
+</DesktopIconGrid>
+```
+
+See [`examples/next-example`](./examples/next-example) for a complete implementation with icons, windows, and taskbar.
 
 ## Requirements
 
