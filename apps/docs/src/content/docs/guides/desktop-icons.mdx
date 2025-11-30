@@ -1,0 +1,194 @@
+---
+title: Desktop Icons
+description: Adding desktop icons with drag and grid snapping
+---
+
+Glazier supports desktop icons that can be dragged, selected, and used to launch windows.
+
+## Basic Icon Setup
+
+First, define your icons in the provider:
+
+```tsx
+<WindowManagerProvider
+	boundsRef={containerRef}
+	registry={appRegistry}
+	defaultIcons={[
+		{
+			id: "settings-icon",
+			label: "Settings",
+			componentId: "settings",
+			position: { x: 0, y: 0 },
+			icon: "settings",
+		},
+		{
+			id: "terminal-icon",
+			label: "Terminal",
+			componentId: "terminal",
+			componentProps: { initialPath: "/home/user" },
+			position: { x: 88, y: 0 },
+			icon: "terminal",
+		},
+	]}
+>
+	{/* ... */}
+</WindowManagerProvider>
+```
+
+## Using DesktopIconGrid
+
+The `DesktopIconGrid` component renders all icons with grid awareness:
+
+```tsx
+import { DesktopIconGrid } from "glazier";
+
+function Desktop() {
+	const gridConfig = {
+		cellWidth: 80,
+		cellHeight: 90,
+		gap: 8,
+	};
+
+	return (
+		<DesktopIconGrid grid={gridConfig} snapToGrid={true}>
+			{({
+				iconState,
+				pixelPosition,
+				isSelected,
+				isDragging,
+				wasDragged,
+				dragProps,
+				onLaunch,
+			}) => (
+				<div
+					{...dragProps}
+					onClick={(e) => {
+						e.stopPropagation();
+						if (!wasDragged) {
+							onLaunch();
+						}
+					}}
+					style={{
+						position: "absolute",
+						left: pixelPosition.x,
+						top: pixelPosition.y,
+						cursor: isDragging ? "grabbing" : "pointer",
+					}}
+				>
+					<IconDisplay
+						label={iconState.label}
+						icon={iconState.icon}
+						isSelected={isSelected}
+						isDragging={isDragging}
+					/>
+				</div>
+			)}
+		</DesktopIconGrid>
+	);
+}
+```
+
+## Icon State
+
+Each icon has the following state:
+
+```tsx
+interface IconState {
+	id: string;
+	label: string;
+	componentId: string; // References WindowRegistry
+	componentProps?: Record<string, unknown>;
+	position: Position;
+	icon?: string; // Consumer-defined icon identifier
+}
+```
+
+## Grid Configuration
+
+```tsx
+interface GridConfig {
+	cellWidth: number; // Width of each grid cell
+	cellHeight: number; // Height of each grid cell
+	gap?: number; // Gap between cells (default: 0)
+}
+```
+
+## Free Positioning (No Grid)
+
+For icons that can be placed anywhere without grid snapping, use `DesktopIcon` directly:
+
+```tsx
+import { DesktopIcon, useWindowManager } from "glazier";
+
+function FreePositionIcons() {
+	const { icons } = useWindowManager();
+
+	return (
+		<>
+			{icons.map((icon) => (
+				<DesktopIcon key={icon.id} id={icon.id}>
+					{({ iconState, dragProps, onLaunch, wasDragged }) => (
+						<div
+							{...dragProps}
+							onClick={() => !wasDragged && onLaunch()}
+							style={{
+								position: "absolute",
+								left: iconState.position.x,
+								top: iconState.position.y,
+							}}
+						>
+							{iconState.label}
+						</div>
+					)}
+				</DesktopIcon>
+			))}
+		</>
+	);
+}
+```
+
+## Render Props
+
+### DesktopIconGrid Render Props
+
+| Prop            | Type                     | Description                          |
+| --------------- | ------------------------ | ------------------------------------ |
+| `iconState`     | `IconState`              | The icon's current state             |
+| `pixelPosition` | `Position`               | Current pixel position               |
+| `gridPosition`  | `{ row, column }`        | Position in grid                     |
+| `isSelected`    | `boolean`                | Whether icon is selected             |
+| `isDragging`    | `boolean`                | Whether icon is being dragged        |
+| `wasDragged`    | `boolean`                | Whether icon was moved during drag   |
+| `dragProps`     | `object`                 | Props to spread on the icon element  |
+| `onSelect`      | `(multiSelect?) => void` | Select the icon                      |
+| `onLaunch`      | `() => void`             | Launch associated window             |
+| `isWindowOpen`  | `boolean`                | Whether associated window is open    |
+| `openOrFocus`   | `() => void`             | Opens window or focuses if open      |
+
+## Launching Windows from Icons
+
+Icons launch windows based on their `componentId` and `componentProps`:
+
+```tsx
+// When icon is launched, it opens a window like this:
+openWindow({
+	id: `${componentId}-${Date.now()}`,
+	title: icon.label,
+	componentId: icon.componentId,
+	componentProps: icon.componentProps,
+	position: { x: 100, y: 100 },
+	size: { width: 400, height: 300 },
+});
+```
+
+Use `defaultWindowConfigs` to customize window sizes per component:
+
+```tsx
+<WindowManagerProvider
+	registry={appRegistry}
+	defaultWindowConfigs={{
+		settings: { width: 400, height: 500 },
+		terminal: { width: 600, height: 400 },
+	}}
+>
+```

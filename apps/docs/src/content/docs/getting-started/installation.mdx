@@ -1,0 +1,47 @@
+---
+title: Installation
+description: How to install Glazier in your project
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Package Manager
+
+<Tabs>
+	<TabItem label="npm">
+		```bash
+		npm install glazier
+		```
+	</TabItem>
+	<TabItem label="pnpm">
+		```bash
+		pnpm add glazier
+		```
+	</TabItem>
+	<TabItem label="yarn">
+		```bash
+		yarn add glazier
+		```
+	</TabItem>
+</Tabs>
+
+## Peer Dependencies
+
+Glazier requires React 17 or later:
+
+```json
+{
+	"peerDependencies": {
+		"react": ">=17",
+		"react-dom": ">=17"
+	}
+}
+```
+
+## TypeScript
+
+Glazier is written in TypeScript and includes type definitions. No additional `@types` packages are needed.
+
+## Next Steps
+
+Once installed, head to the [Quick Start](/getting-started/quick-start/) guide to create your first window.

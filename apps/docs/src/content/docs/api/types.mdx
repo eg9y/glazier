@@ -1,0 +1,173 @@
+---
+title: Types
+description: TypeScript type definitions for Glazier
+---
+
+## Window Types
+
+### WindowState
+
+Complete window state object.
+
+```tsx
+interface WindowState {
+	id: string;
+	title: string;
+	position: Position;
+	size: Size;
+	zIndex: number;
+	displayState: WindowDisplayState;
+	previousBounds?: {
+		position: Position;
+		size: Size;
+	};
+	componentId?: string;
+	componentProps?: Record<string, unknown>;
+}
+```
+
+### WindowConfig
+
+Configuration for opening a new window.
+
+```tsx
+type WindowConfig = Omit<
+	WindowState,
+	"zIndex" | "displayState" | "previousBounds"
+> & {
+	zIndex?: number;
+	displayState?: WindowDisplayState;
+};
+```
+
+### WindowDisplayState
+
+```tsx
+type WindowDisplayState = "normal" | "minimized" | "maximized";
+```
+
+### WindowRegistry
+
+Map of component IDs to React components.
+
+```tsx
+type WindowRegistry = Record<
+	string,
+	ComponentType<{ windowId: string; [key: string]: unknown }>
+>;
+```
+
+### WindowConfigRegistry
+
+Default configurations for window types.
+
+```tsx
+type WindowConfigRegistry = Record<
+	string,
+	{
+		width?: number;
+		height?: number;
+	}
+>;
+```
+
+## Icon Types
+
+### IconState
+
+Desktop icon state.
+
+```tsx
+interface IconState {
+	id: string;
+	label: string;
+	componentId: string;
+	componentProps?: Record<string, unknown>;
+	position: Position;
+	icon?: string;
+}
+```
+
+### GridConfig
+
+Grid configuration for icon snapping.
+
+```tsx
+interface GridConfig {
+	cellWidth: number;
+	cellHeight: number;
+	gap?: number;
+}
+```
+
+## Common Types
+
+### Position
+
+```tsx
+interface Position {
+	x: number;
+	y: number;
+}
+```
+
+### Size
+
+```tsx
+interface Size {
+	width: number;
+	height: number;
+}
+```
+
+### ResizeDirection
+
+```tsx
+type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+```
+
+### SnapZone
+
+```tsx
+type SnapZone = "left" | "right";
+```
+
+## Context Types
+
+### WindowManagerState
+
+State returned by `useWindowManager`.
+
+```tsx
+interface WindowManagerState {
+	windows: WindowState[];
+	activeWindowId: string | null;
+}
+```
+
+### WindowManagerContextValue
+
+Full context value.
+
+```tsx
+interface WindowManagerContextValue {
+	state: WindowManagerState;
+	openWindow: (config: WindowConfig) => void;
+	closeWindow: (id: string) => void;
+	focusWindow: (id: string) => void;
+	updateWindow: (id: string, updates: Partial<WindowState>) => void;
+	bringToFront: (id: string) => void;
+	sendToBack: (id: string) => void;
+	minimizeWindow: (id: string) => void;
+	maximizeWindow: (id: string) => void;
+	restoreWindow: (id: string) => void;
+	getContainerBounds: () => Size | null;
+	icons: IconState[];
+	selectedIconIds: Set<string>;
+	selectIcon: (id: string, multiSelect?: boolean) => void;
+	deselectIcon: (id: string) => void;
+	clearIconSelection: () => void;
+	updateIconPosition: (id: string, position: Position) => void;
+	launchIcon: (id: string) => void;
+}
+```

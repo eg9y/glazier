@@ -6,9 +6,9 @@
 		"moduleResolution": "Bundler",
 		"skipLibCheck": true,
 		"strict": true,
-		"noEmit": true
+		"noEmit": true,
+		"types": ["vitest/globals"]
 	},
-	"references": [{ "path": "./packages/glazier" }],
-	"include": [],
-	"exclude": ["node_modules", "dist", "apps", "packages"]
+	"include": ["src"],
+	"exclude": ["dist", "node_modules"]
 }

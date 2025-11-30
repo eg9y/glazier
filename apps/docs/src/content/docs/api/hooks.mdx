@@ -1,0 +1,172 @@
+---
+title: Hooks
+description: API reference for Glazier hooks
+---
+
+## useWindowManager
+
+Access the window manager context.
+
+```tsx
+const {
+	state, // { windows: WindowState[], activeWindowId: string | null }
+	openWindow, // (config: WindowConfig) => void
+	closeWindow, // (id: string) => void
+	focusWindow, // (id: string) => void
+	updateWindow, // (id: string, updates: Partial<WindowState>) => void
+	bringToFront, // (id: string) => void
+	sendToBack, // (id: string) => void
+	minimizeWindow, // (id: string) => void
+	maximizeWindow, // (id: string) => void
+	restoreWindow, // (id: string) => void
+	getContainerBounds, // () => { width: number, height: number } | null
+	icons, // IconState[] - all desktop icons
+} = useWindowManager();
+```
+
+## useWindow
+
+Convenience hook for a single window.
+
+```tsx
+const {
+	id, // Window ID
+	title, // Window title
+	displayState, // "normal" | "minimized" | "maximized"
+	isFocused, // Whether this window is active
+	close, // () => void
+	minimize, // () => void
+	maximize, // () => void
+	restore, // () => void
+} = useWindow("window-1");
+```
+
+## useWindowDrag
+
+Window-specific drag behavior with snap support.
+
+```tsx
+const { isDragging, activeSnapZone, dragHandleProps } = useWindowDrag({
+	windowId: "window-1",
+	dragHandleRef: titleBarRef,
+	disableMaximizedDragRestore: false, // Allow dragging from maximized
+	enableDoubleClickMaximize: true, // Double-click title bar to maximize
+	enableSnapToEdges: true, // Snap to left/right edges
+	onSnapZoneEnter: (zone) => {}, // Called when entering snap zone
+	onSnapZoneLeave: () => {}, // Called when leaving snap zone
+});
+
+// Spread dragHandleProps onto your title bar element
+<div ref={titleBarRef} {...dragHandleProps}>
+	Title
+</div>;
+```
+
+### Options
+
+| Option                        | Type                       | Default | Description                    |
+| ----------------------------- | -------------------------- | ------- | ------------------------------ |
+| `windowId`                    | `string`                   | -       | Window ID (required)           |
+| `dragHandleRef`               | `RefObject<HTMLElement>`   | -       | Ref to drag handle element     |
+| `disableMaximizedDragRestore` | `boolean`                  | `false` | Prevent restore when dragging  |
+| `enableDoubleClickMaximize`   | `boolean`                  | `false` | Double-click to maximize       |
+| `enableSnapToEdges`           | `boolean`                  | `false` | Enable edge snapping           |
+| `onSnapZoneEnter`             | `(zone: SnapZone) => void` | -       | Called when entering snap zone |
+| `onSnapZoneLeave`             | `() => void`               | -       | Called when leaving snap zone  |
+
+## useResize
+
+Resize handle behavior.
+
+```tsx
+const { isResizing, resizeHandleProps } = useResize(
+	{ width: 400, height: 300 }, // Current size
+	{ x: 100, y: 100 }, // Current position
+	{
+		minWidth: 200,
+		minHeight: 150,
+		maxWidth: 800,
+		maxHeight: 600,
+		onResizeStart: () => {},
+		onResize: (size, position) => updateWindow(id, { size, position }),
+		onResizeEnd: (size, position) => {},
+	}
+);
+
+// Create resize handles for any direction
+<div {...resizeHandleProps("se")} />; // Southeast corner
+<div {...resizeHandleProps("e")} />; // East edge
+<div {...resizeHandleProps("n")} />; // North edge
+```
+
+### Resize Directions
+
+`"n"`, `"s"`, `"e"`, `"w"`, `"ne"`, `"nw"`, `"se"`, `"sw"`
+
+### Options
+
+| Option          | Type                                           | Description             |
+| --------------- | ---------------------------------------------- | ----------------------- |
+| `minWidth`      | `number`                                       | Minimum width           |
+| `minHeight`     | `number`                                       | Minimum height          |
+| `maxWidth`      | `number`                                       | Maximum width           |
+| `maxHeight`     | `number`                                       | Maximum height          |
+| `onResizeStart` | `() => void`                                   | Called when resize starts |
+| `onResize`      | `(size: Size, position: Position) => void`     | Called during resize    |
+| `onResizeEnd`   | `(size: Size, position: Position) => void`     | Called when resize ends |
+
+## useDrag
+
+Generic drag primitive (used internally by useWindowDrag).
+
+```tsx
+const { isDragging, dragHandleProps } = useDrag({
+	onDragStart: () => {},
+	onDrag: (position, delta) => {},
+	onDragEnd: () => {},
+	getBoundsConstraint: () => ({ container, windowSize, windowPosition }),
+	onConstrainToBounds: (correctedPosition) => {},
+});
+```
+
+## useDesktopIcon
+
+Access and control a single desktop icon.
+
+```tsx
+const {
+	iconState, // The icon's current state
+	isSelected, // Whether icon is selected
+	select, // (multiSelect?: boolean) => void
+	deselect, // () => void
+	toggleSelect, // () => void
+	launch, // () => void - opens associated window
+	updatePosition, // (position: Position) => void
+} = useDesktopIcon("icon-1");
+```
+
+## useIconDrag
+
+Drag behavior for desktop icons with optional grid snapping.
+
+```tsx
+const { isDragging, wasDragged, dragHandleProps } = useIconDrag({
+	iconId: "icon-1",
+	gridConfig: { cellWidth: 80, cellHeight: 90, gap: 10 },
+	snapOnDrop: true, // Snap only when released (default)
+	onDragStart: (position) => {},
+	onDrag: (position) => {},
+	onDragEnd: (position) => {},
+});
+```
+
+### Options
+
+| Option        | Type                           | Default | Description               |
+| ------------- | ------------------------------ | ------- | ------------------------- |
+| `iconId`      | `string`                       | -       | Icon ID (required)        |
+| `gridConfig`  | `GridConfig`                   | -       | Grid configuration        |
+| `snapOnDrop`  | `boolean`                      | `true`  | Snap only when released   |
+| `onDragStart` | `(position: Position) => void` | -       | Called when drag starts   |
+| `onDrag`      | `(position: Position) => void` | -       | Called during drag        |
+| `onDragEnd`   | `(position: Position) => void` | -       | Called when drag ends     |

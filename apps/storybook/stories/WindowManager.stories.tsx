@@ -1,6 +1,4 @@
 import type { Meta, StoryFn } from "@storybook/react";
-import type { ReactNode } from "react";
-import { useRef, useState } from "react";
 import {
 	Desktop,
 	SnapPreviewOverlay,
@@ -10,8 +8,10 @@ import {
 	useResize,
 	useWindowDrag,
 	useWindowManager,
-} from "..";
-import type { SnapZone, WindowRegistry, WindowState } from "..";
+} from "glazier";
+import type { SnapZone, WindowRegistry, WindowState } from "glazier";
+import type { ReactNode } from "react";
+import { useRef, useState } from "react";
 
 export default {
 	title: "WindowManager",
@@ -878,8 +878,8 @@ export const ComponentRegistry = ComponentRegistryTemplate.bind({});
 // Desktop Icons Story
 // ============================================
 
-import { DesktopIconGrid } from "../components/DesktopIconGrid";
-import type { GridConfig, IconState } from "../types";
+import { DesktopIconGrid } from "glazier";
+import type { GridConfig, IconState } from "glazier";
 
 // Simple icon component for demonstration
 function IconDisplay({
@@ -1087,7 +1087,7 @@ export const DesktopIcons = DesktopIconsTemplate.bind({});
 // Desktop Icons Without Grid Story
 // ============================================
 
-import { DesktopIcon, useWindowManager as useWM } from "..";
+import { DesktopIcon, useWindowManager as useWM } from "glazier";
 
 function FreePositionIcons() {
 	const { icons } = useWM();

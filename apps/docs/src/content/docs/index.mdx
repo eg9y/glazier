@@ -1,0 +1,40 @@
+---
+title: Glazier
+description: Headless React window management primitives
+template: splash
+hero:
+  tagline: Build desktop-like interfaces with draggable, resizable windows. Bring your own UI.
+  actions:
+    - text: Get Started
+      link: /getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/eg9y/glazier
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Features
+
+<CardGrid stagger>
+	<Card title="Headless Design" icon="paintbrush">
+		Zero styles included. Full control over appearance. Glazier provides behavior, you provide the look.
+	</Card>
+	<Card title="Draggable Windows" icon="cursor">
+		Drag windows with pointer capture for reliable tracking across the viewport.
+	</Card>
+	<Card title="Resizable" icon="resize">
+		Resize from 8 directions (n, s, e, w, ne, nw, se, sw) with customizable constraints.
+	</Card>
+	<Card title="Snap-to-edges" icon="left-right">
+		Snap windows to left/right edges with visual preview for split-screen layouts.
+	</Card>
+	<Card title="Desktop Icons" icon="grid">
+		Grid snapping, drag support, multi-select, and window launching from icons.
+	</Card>
+	<Card title="TypeScript" icon="seti:typescript">
+		Fully typed API with comprehensive type exports for great DX.
+	</Card>
+</CardGrid>

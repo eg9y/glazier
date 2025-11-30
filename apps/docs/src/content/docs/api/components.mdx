@@ -1,0 +1,219 @@
+---
+title: Components
+description: API reference for Glazier components
+---
+
+## WindowManagerProvider
+
+Root provider that manages all window state.
+
+```tsx
+<WindowManagerProvider
+	boundsRef={containerRef}
+	registry={appRegistry}
+	defaultWindows={initialWindows}
+	defaultIcons={initialIcons}
+	defaultWindowConfigs={windowConfigs}
+	initialFocusedWindowId="window-1"
+	onFocusChange={(windowId) => console.log("Focus:", windowId)}
+>
+	{children}
+</WindowManagerProvider>
+```
+
+### Props
+
+| Prop                   | Type                                | Description                          |
+| ---------------------- | ----------------------------------- | ------------------------------------ |
+| `children`             | `ReactNode`                         | Child components                     |
+| `defaultWindows`       | `WindowState[]`                     | Initial windows to render            |
+| `defaultIcons`         | `IconState[]`                       | Initial desktop icons                |
+| `registry`             | `WindowRegistry`                    | Component registry for Desktop       |
+| `defaultWindowConfigs` | `WindowConfigRegistry`              | Default window configs by componentId |
+| `boundsRef`            | `RefObject<HTMLElement>`            | Container for bounds constraints     |
+| `initialFocusedWindowId` | `string`                          | Which window to focus initially      |
+| `onFocusChange`        | `(windowId: string \| null) => void` | Callback when focus changes          |
+
+## Window
+
+Positioning container for a single window.
+
+```tsx
+<Window id="window-1" className="my-window" style={{ background: "white" }}>
+	{/* Window content */}
+</Window>
+```
+
+### Props
+
+| Prop        | Type            | Description                           |
+| ----------- | --------------- | ------------------------------------- |
+| `id`        | `string`        | Window ID (must match state)          |
+| `children`  | `ReactNode`     | Window content                        |
+| `className` | `string`        | Optional CSS class                    |
+| `style`     | `CSSProperties` | Optional inline styles                |
+
+## Desktop
+
+Auto-renders windows from the registry based on `componentId`.
+
+```tsx
+<Desktop className="desktop-area" style={{ height: "100%" }}>
+	{({ component: Component, windowId, componentProps, windowState }) => (
+		<Window id={windowId}>
+			<Component windowId={windowId} {...componentProps} />
+		</Window>
+	)}
+</Desktop>
+```
+
+### Props
+
+| Prop        | Type                                      | Description            |
+| ----------- | ----------------------------------------- | ---------------------- |
+| `children`  | `(props: DesktopRenderProps) => ReactNode` | Render function        |
+| `className` | `string`                                  | Optional CSS class     |
+| `style`     | `CSSProperties`                           | Optional inline styles |
+
+### Render Props
+
+| Prop             | Type            | Description                    |
+| ---------------- | --------------- | ------------------------------ |
+| `component`      | `ComponentType` | The resolved React component   |
+| `windowId`       | `string`        | The window's ID                |
+| `componentProps` | `object`        | Props to pass to the component |
+| `windowState`    | `WindowState`   | Full window state object       |
+
+## Taskbar
+
+Headless taskbar component with render props.
+
+```tsx
+<Taskbar>
+	{({ windows, activeWindowId, focusWindow, minimizeWindow, restoreWindow, closeWindow }) => (
+		<div className="taskbar">
+			{windows.map((w) => (
+				<button key={w.id} onClick={() => focusWindow(w.id)}>
+					{w.title}
+				</button>
+			))}
+		</div>
+	)}
+</Taskbar>
+```
+
+### Render Props
+
+| Prop             | Type                      | Description              |
+| ---------------- | ------------------------- | ------------------------ |
+| `windows`        | `WindowState[]`           | Array of all windows     |
+| `activeWindowId` | `string \| null`          | Currently focused window |
+| `focusWindow`    | `(id: string) => void`    | Focus a window           |
+| `minimizeWindow` | `(id: string) => void`    | Minimize a window        |
+| `restoreWindow`  | `(id: string) => void`    | Restore a window         |
+| `closeWindow`    | `(id: string) => void`    | Close a window           |
+
+## SnapPreviewOverlay
+
+Visual preview overlay for snap zones during drag.
+
+```tsx
+<SnapPreviewOverlay
+	zone={snapZone} // "left" | "right" | null
+	style={{ background: "rgba(0, 100, 255, 0.2)" }}
+/>
+```
+
+### Props
+
+| Prop    | Type                         | Description            |
+| ------- | ---------------------------- | ---------------------- |
+| `zone`  | `"left" \| "right" \| null`  | Active snap zone       |
+| `style` | `CSSProperties`              | Optional inline styles |
+
+## DesktopIcon
+
+Headless component for individual desktop icons.
+
+```tsx
+<DesktopIcon
+	id="icon-1"
+	gridConfig={{ cellWidth: 80, cellHeight: 90, gap: 8 }}
+	snapOnDrop={true}
+>
+	{({ iconState, isSelected, isDragging, wasDragged, dragProps, onLaunch }) => (
+		<div {...dragProps} onClick={() => !wasDragged && onLaunch()}>
+			{iconState.label}
+		</div>
+	)}
+</DesktopIcon>
+```
+
+### Props
+
+| Prop         | Type                                        | Description                |
+| ------------ | ------------------------------------------- | -------------------------- |
+| `id`         | `string`                                    | Icon ID                    |
+| `children`   | `(props: DesktopIconRenderProps) => ReactNode` | Render function            |
+| `gridConfig` | `GridConfig`                                | Grid configuration         |
+| `snapOnDrop` | `boolean`                                   | Snap only on drop          |
+
+### Render Props
+
+| Prop         | Type                     | Description                        |
+| ------------ | ------------------------ | ---------------------------------- |
+| `iconId`     | `string`                 | Icon ID                            |
+| `iconState`  | `IconState`              | Full icon state                    |
+| `isSelected` | `boolean`                | Whether selected                   |
+| `isDragging` | `boolean`                | Whether being dragged              |
+| `wasDragged` | `boolean`                | Whether moved (prevent click)      |
+| `dragProps`  | `object`                 | Props for drag element             |
+| `onSelect`   | `(multiSelect?) => void` | Select handler                     |
+| `onLaunch`   | `() => void`             | Launch window                      |
+
+## DesktopIconGrid
+
+Container that renders all icons with grid awareness.
+
+```tsx
+<DesktopIconGrid
+	grid={{ cellWidth: 80, cellHeight: 90, gap: 8 }}
+	snapToGrid={true}
+	className="icon-grid"
+>
+	{({ iconState, pixelPosition, gridPosition, isSelected, dragProps, openOrFocus }) => (
+		<div
+			{...dragProps}
+			style={{
+				position: "absolute",
+				left: pixelPosition.x,
+				top: pixelPosition.y,
+			}}
+			onDoubleClick={openOrFocus}
+		>
+			{iconState.label}
+		</div>
+	)}
+</DesktopIconGrid>
+```
+
+### Props
+
+| Prop         | Type                                            | Description          |
+| ------------ | ----------------------------------------------- | -------------------- |
+| `children`   | `(props: DesktopIconGridRenderProps) => ReactNode` | Render function      |
+| `grid`       | `GridConfig`                                    | Grid configuration   |
+| `snapToGrid` | `boolean`                                       | Enable grid snapping |
+| `className`  | `string`                                        | Optional CSS class   |
+| `style`      | `CSSProperties`                                 | Optional styles      |
+
+### Render Props
+
+Extends `DesktopIconRenderProps` with:
+
+| Prop            | Type                  | Description                |
+| --------------- | --------------------- | -------------------------- |
+| `gridPosition`  | `{ row, column }`     | Position in grid           |
+| `pixelPosition` | `Position`            | Current pixel position     |
+| `isWindowOpen`  | `boolean`             | Whether window is open     |
+| `openOrFocus`   | `() => void`          | Opens or focuses window    |

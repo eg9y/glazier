@@ -1,0 +1,151 @@
+---
+title: Window Management
+description: Managing windows, state, and interactions
+---
+
+## Window State
+
+Each window has the following state:
+
+```tsx
+interface WindowState {
+	id: string;
+	title: string;
+	position: { x: number; y: number };
+	size: { width: number; height: number };
+	zIndex: number;
+	displayState: "normal" | "minimized" | "maximized";
+	previousBounds?: { position: Position; size: Size };
+	componentId?: string;
+	componentProps?: Record<string, unknown>;
+}
+```
+
+## Opening Windows
+
+Use `openWindow` to create new windows:
+
+```tsx
+const { openWindow } = useWindowManager();
+
+openWindow({
+	id: `window-${Date.now()}`,
+	title: "New Window",
+	position: { x: 100, y: 100 },
+	size: { width: 400, height: 300 },
+});
+```
+
+## Window Controls
+
+### Minimize, Maximize, Restore
+
+```tsx
+const { minimizeWindow, maximizeWindow, restoreWindow } = useWindowManager();
+
+// Minimize (hides window, shows in taskbar)
+minimizeWindow("window-1");
+
+// Maximize (fills container bounds)
+maximizeWindow("window-1");
+
+// Restore (returns to previous bounds)
+restoreWindow("window-1");
+```
+
+### Z-Index Management
+
+```tsx
+const { bringToFront, sendToBack, focusWindow } = useWindowManager();
+
+// Bring window to top of stack
+bringToFront("window-1");
+
+// Send to bottom
+sendToBack("window-1");
+
+// Focus (also brings to front)
+focusWindow("window-1");
+```
+
+## Taskbar
+
+The `Taskbar` component provides render props for building your taskbar UI:
+
+```tsx
+import { Taskbar } from "glazier";
+
+function MyTaskbar() {
+	return (
+		<Taskbar>
+			{({
+				windows,
+				activeWindowId,
+				focusWindow,
+				minimizeWindow,
+				restoreWindow,
+			}) => (
+				<div className="taskbar">
+					{windows.map((w) => (
+						<button
+							key={w.id}
+							onClick={() => {
+								if (w.displayState === "minimized") {
+									restoreWindow(w.id);
+								} else if (w.id === activeWindowId) {
+									minimizeWindow(w.id);
+								} else {
+									focusWindow(w.id);
+								}
+							}}
+							style={{
+								opacity: w.displayState === "minimized" ? 0.6 : 1,
+							}}
+						>
+							{w.title}
+						</button>
+					))}
+				</div>
+			)}
+		</Taskbar>
+	);
+}
+```
+
+## Snap to Edges
+
+Enable edge snapping for split-screen layouts:
+
+```tsx
+const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
+
+const { dragHandleProps } = useWindowDrag({
+	windowId,
+	dragHandleRef: titleBarRef,
+	enableSnapToEdges: true,
+	onSnapZoneEnter: setSnapZone,
+	onSnapZoneLeave: () => setSnapZone(null),
+});
+
+// Show visual preview
+<SnapPreviewOverlay zone={snapZone} />;
+```
+
+When dragging near edges:
+
+- **Left edge**: Window snaps to left 50%
+- **Right edge**: Window snaps to right 50%
+
+## Bounds Constraint
+
+Windows are constrained to the container specified by `boundsRef`. When a window goes out of bounds (e.g., after resize), it's automatically repositioned.
+
+```tsx
+const containerRef = useRef<HTMLDivElement>(null);
+
+<WindowManagerProvider boundsRef={containerRef}>
+	<div ref={containerRef} style={{ position: "relative", height: "100vh" }}>
+		{/* Windows constrained to this container */}
+	</div>
+</WindowManagerProvider>;
+```

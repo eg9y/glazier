@@ -1,0 +1,64 @@
+---
+title: Introduction
+description: Headless React window management primitives
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+Glazier provides unstyled, fully accessible window management components for React. Build desktop-like interfaces with draggable, resizable windows—bring your own UI.
+
+## Features
+
+<CardGrid>
+	<Card title="Draggable Windows" icon="cursor">
+		Drag windows with pointer capture for reliable tracking
+	</Card>
+	<Card title="Resizable" icon="resize">
+		Resize from 8 directions (n, s, e, w, ne, nw, se, sw)
+	</Card>
+	<Card title="Snap-to-edges" icon="left-right">
+		Visual preview with left/right 50% split
+	</Card>
+	<Card title="Window States" icon="layers">
+		Maximize, minimize, restore with bounds memory
+	</Card>
+	<Card title="Desktop Icons" icon="grid">
+		Grid snapping, drag support, and multi-select
+	</Card>
+	<Card title="Headless Design" icon="paintbrush">
+		Zero styles included, full control over appearance
+	</Card>
+</CardGrid>
+
+## Why Glazier?
+
+### Headless Design
+
+Glazier provides behavior, not appearance. Components handle positioning, state management, and user interactions—you provide all styling. This gives you complete control over the look and feel.
+
+### Component Registry Pattern
+
+For apps with multiple window types, use the registry pattern. Define components once, then open windows by referencing their `componentId`. This makes window state fully serializable (great for localStorage or URL persistence).
+
+```tsx
+const registry = {
+	settings: SettingsPanel,
+	terminal: TerminalApp,
+	notes: NotesApp,
+};
+
+<WindowManagerProvider registry={registry}>
+	<Desktop>
+		{({ Component, windowId, componentProps }) => (
+			<Window id={windowId}>
+				<Component windowId={windowId} {...componentProps} />
+			</Window>
+		)}
+	</Desktop>
+</WindowManagerProvider>;
+```
+
+## Requirements
+
+- React >= 17
+- React DOM >= 17

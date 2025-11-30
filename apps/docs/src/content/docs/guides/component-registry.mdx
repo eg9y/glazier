@@ -1,0 +1,214 @@
+---
+title: Component Registry
+description: Using the component registry pattern for multiple window types
+---
+
+The component registry pattern allows you to define window components once and open them by ID. This makes window state fully serializable—perfect for persistence in localStorage or URL state.
+
+## Setting Up a Registry
+
+Define your window components and register them:
+
+```tsx
+// Define your window components
+function SettingsPanel({ windowId }: { windowId: string }) {
+	return (
+		<div>
+			<h3>Settings</h3>
+			{/* Settings UI */}
+		</div>
+	);
+}
+
+function TerminalApp({
+	windowId,
+	initialPath,
+}: {
+	windowId: string;
+	initialPath?: string;
+}) {
+	return (
+		<div>
+			<code>$ cd {initialPath ?? "/home/user"}</code>
+		</div>
+	);
+}
+
+function NotesApp({ windowId }: { windowId: string }) {
+	return <textarea placeholder="Start typing..." />;
+}
+
+// Create the registry
+const appRegistry = {
+	settings: SettingsPanel,
+	terminal: TerminalApp,
+	notes: NotesApp,
+};
+```
+
+## Using the Registry
+
+Pass the registry to `WindowManagerProvider`:
+
+```tsx
+<WindowManagerProvider boundsRef={containerRef} registry={appRegistry}>
+	{/* Windows will be rendered based on componentId */}
+</WindowManagerProvider>
+```
+
+## The Desktop Component
+
+The `Desktop` component auto-renders windows from the registry:
+
+```tsx
+import { Desktop, Window } from "glazier";
+
+function MyDesktop() {
+	return (
+		<Desktop>
+			{({ component: Component, windowId, componentProps, windowState }) => (
+				<WindowChrome windowId={windowId} title={windowState.title}>
+					<Component windowId={windowId} {...componentProps} />
+				</WindowChrome>
+			)}
+		</Desktop>
+	);
+}
+```
+
+### Desktop Render Props
+
+| Prop             | Type            | Description                       |
+| ---------------- | --------------- | --------------------------------- |
+| `component`      | `ComponentType` | The resolved component            |
+| `windowId`       | `string`        | The window's ID                   |
+| `componentProps` | `object`        | Props to pass to the component    |
+| `windowState`    | `WindowState`   | Full window state object          |
+
+## Opening Windows by Component ID
+
+Use `openWindow` with a `componentId`:
+
+```tsx
+const { openWindow } = useWindowManager();
+
+function launchApp(componentId: string, title: string, props?: object) {
+	openWindow({
+		id: `${componentId}-${Date.now()}`,
+		title,
+		componentId,
+		componentProps: props,
+		position: { x: 100, y: 100 },
+		size: { width: 400, height: 300 },
+	});
+}
+
+// Usage
+launchApp("settings", "Settings");
+launchApp("terminal", "Terminal", { initialPath: "/home/user/Projects" });
+```
+
+## Default Window Configurations
+
+Set default sizes per component type:
+
+```tsx
+<WindowManagerProvider
+	registry={appRegistry}
+	defaultWindowConfigs={{
+		settings: { width: 350, height: 400 },
+		terminal: { width: 600, height: 400 },
+		notes: { width: 400, height: 500 },
+	}}
+>
+```
+
+## Serializable State
+
+Because windows reference components by ID, the state is JSON-serializable:
+
+```tsx
+// Window state is fully serializable
+const windowState = {
+	id: "terminal-123",
+	title: "Terminal",
+	componentId: "terminal",
+	componentProps: { initialPath: "/home/user" },
+	position: { x: 100, y: 100 },
+	size: { width: 600, height: 400 },
+	zIndex: 1,
+	displayState: "normal",
+};
+
+// Save to localStorage
+localStorage.setItem("windows", JSON.stringify(windows));
+
+// Restore on load
+const saved = JSON.parse(localStorage.getItem("windows") || "[]");
+<WindowManagerProvider defaultWindows={saved} registry={appRegistry}>
+```
+
+## Complete Example
+
+```tsx
+import { useRef, useState } from "react";
+import {
+	WindowManagerProvider,
+	Desktop,
+	Taskbar,
+	SnapPreviewOverlay,
+} from "glazier";
+
+// Registry
+const appRegistry = {
+	settings: SettingsPanel,
+	terminal: TerminalApp,
+	notes: NotesApp,
+};
+
+// Default windows
+const defaultWindows = [
+	{
+		id: "settings-default",
+		title: "Settings",
+		componentId: "settings",
+		position: { x: 50, y: 80 },
+		size: { width: 300, height: 250 },
+		zIndex: 1,
+		displayState: "normal",
+	},
+];
+
+function App() {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [snapZone, setSnapZone] = useState(null);
+
+	return (
+		<WindowManagerProvider
+			boundsRef={containerRef}
+			registry={appRegistry}
+			defaultWindows={defaultWindows}
+		>
+			<div ref={containerRef} className="desktop">
+				<LaunchButtons />
+
+				<Desktop>
+					{({ component: Component, windowId, componentProps, windowState }) => (
+						<WindowChrome
+							windowId={windowId}
+							title={windowState.title}
+							onSnapZoneEnter={setSnapZone}
+							onSnapZoneLeave={() => setSnapZone(null)}
+						>
+							<Component windowId={windowId} {...componentProps} />
+						</WindowChrome>
+					)}
+				</Desktop>
+
+				<SnapPreviewOverlay zone={snapZone} />
+				<MyTaskbar />
+			</div>
+		</WindowManagerProvider>
+	);
+}
+```

@@ -46,7 +46,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check types
-        run: pnpm tsc
+        run: pnpm --filter glazier tsc
 
       - name: Check linting
         run: pnpm lint:ci
@@ -54,8 +54,5 @@ jobs:
       - name: Run tests
         run: pnpm test:ci
 
-      - name: Build storybook
-        run: pnpm storybook:build
-
-      - name: Build package
+      - name: Build all packages
         run: pnpm build

@@ -4,8 +4,8 @@ pre-commit:
     lint:
       run: pnpm biome check --write --unsafe --staged --no-errors-on-unmatched && git add -u
     typecheck:
-      run: pnpm tsc
+      run: pnpm --filter glazier tsc
     build:
-      run: pnpm build
+      run: pnpm build:lib
     test:
-      run: pnpm test:ci
+      run: pnpm --filter glazier test:ci
