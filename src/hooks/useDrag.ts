@@ -1,9 +1,18 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
 import type { ContainerBounds } from "../context/WindowManagerContext";
-import type { Position, Size } from "../types";
+import type { Position } from "../types";
 
 export type { ContainerBounds };
+
+/**
+ * Resolved pixel size for bounds calculations.
+ * CSS unit sizes must be resolved to pixels before passing to constrainPositionToBounds.
+ */
+export interface ResolvedSize {
+	width: number;
+	height: number;
+}
 
 export interface UseDragOptions {
 	onDragStart?: (position: Position) => void;
@@ -12,10 +21,11 @@ export interface UseDragOptions {
 	/**
 	 * If provided, the window will be repositioned back into bounds when drag ends.
 	 * Should return the current container bounds and window size/position.
+	 * Note: windowSize must be resolved to pixels if it contains CSS units.
 	 */
 	getBoundsConstraint?: () => {
 		container: ContainerBounds;
-		windowSize: Size;
+		windowSize: ResolvedSize;
 		windowPosition: Position;
 	} | null;
 	/**
@@ -35,9 +45,14 @@ export interface UseDragReturn {
 	};
 }
 
+/**
+ * Constrains a position to keep the window within container bounds.
+ * Note: windowSize must be resolved to pixel values before calling this function.
+ * Use resolveToPixels() if the size contains CSS units.
+ */
 export function constrainPositionToBounds(
 	position: Position,
-	windowSize: Size,
+	windowSize: ResolvedSize,
 	container: ContainerBounds,
 ): Position {
 	let { x, y } = position;

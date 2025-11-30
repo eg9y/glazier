@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useWindowManager } from "../hooks/useWindowManager";
+import { toCSSValue } from "../utils/sizeUtils";
 
 export interface WindowProps {
 	id: string;
@@ -30,8 +31,8 @@ export function Window({ id, children, className, style }: WindowProps) {
 		transform: isMaximized
 			? "none"
 			: `translate3d(${position.x}px, ${position.y}px, 0)`,
-		width: isMaximized ? "100%" : size.width,
-		height: isMaximized ? "100%" : size.height,
+		width: isMaximized ? "100%" : toCSSValue(size.width),
+		height: isMaximized ? "100%" : toCSSValue(size.height),
 		top: 0,
 		left: 0,
 		zIndex,

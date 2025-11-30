@@ -6,9 +6,16 @@ export interface Position {
 	y: number;
 }
 
+/**
+ * A size dimension value that can be either:
+ * - A number (interpreted as pixels)
+ * - A CSS length string (e.g., "80vh", "50%", "300px", "calc(100% - 20px)")
+ */
+export type SizeValue = number | string;
+
 export interface Size {
-	width: number;
-	height: number;
+	width: SizeValue;
+	height: SizeValue;
 }
 
 export type WindowDisplayState = "normal" | "minimized" | "maximized";

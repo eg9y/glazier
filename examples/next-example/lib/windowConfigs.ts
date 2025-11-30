@@ -10,7 +10,7 @@ export const windowConfigs: Record<string, WindowState> = {
 		title: "Home",
 		componentId: "home",
 		position: { x: 150, y: 80 },
-		size: { width: 500, height: 400 },
+		size: { width: "90vw", height: 400 },
 		zIndex: 1,
 		displayState: "normal",
 	},

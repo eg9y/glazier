@@ -3,6 +3,7 @@ import type { RefObject } from "react";
 import { useCallback, useRef, useState } from "react";
 import type { ContainerBounds } from "../context/WindowManagerContext";
 import type { Position, WindowState } from "../types";
+import { isNumericSize, resolveSizeValueToPixels } from "../utils/sizeUtils";
 import { useDrag } from "./useDrag";
 import { useWindowManager } from "./useWindowManager";
 
@@ -58,12 +59,28 @@ function calculateRestoredPosition(
 	win: WindowState,
 	dragHandle: HTMLElement,
 	containerRect: DOMRect | undefined,
+	container: HTMLElement | null,
 ): { position: Position; size: { width: number; height: number } } {
 	const handleRect = dragHandle.getBoundingClientRect();
 	const cursorPercent = (position.x - handleRect.left) / handleRect.width;
 
-	const restoredWidth = win.previousBounds?.size.width ?? win.size.width;
-	const restoredHeight = win.previousBounds?.size.height ?? win.size.height;
+	// Resolve size to pixels (previousBounds or current size may have CSS units)
+	const sizeSource = win.previousBounds?.size ?? win.size;
+	let restoredWidth: number;
+	let restoredHeight: number;
+
+	if (container) {
+		restoredWidth = isNumericSize(sizeSource.width)
+			? sizeSource.width
+			: resolveSizeValueToPixels(sizeSource.width, container, "width");
+		restoredHeight = isNumericSize(sizeSource.height)
+			? sizeSource.height
+			: resolveSizeValueToPixels(sizeSource.height, container, "height");
+	} else {
+		// Fallback to numeric values or defaults
+		restoredWidth = isNumericSize(sizeSource.width) ? sizeSource.width : 400;
+		restoredHeight = isNumericSize(sizeSource.height) ? sizeSource.height : 300;
+	}
 
 	const newX =
 		position.x - (containerRect?.left ?? 0) - restoredWidth * cursorPercent;
@@ -141,6 +158,7 @@ export function useWindowDrag({
 				win,
 				dragHandle,
 				containerRect,
+				boundsRef?.current ?? null,
 			);
 
 			updateWindow(windowId, {
@@ -273,9 +291,32 @@ export function useWindowDrag({
 				return null;
 			}
 
+			// Resolve window size to pixels if it contains CSS units
+			const container = boundsRef?.current;
+			let resolvedWidth: number;
+			let resolvedHeight: number;
+
+			if (container) {
+				resolvedWidth = isNumericSize(win.size.width)
+					? win.size.width
+					: resolveSizeValueToPixels(win.size.width, container, "width");
+				resolvedHeight = isNumericSize(win.size.height)
+					? win.size.height
+					: resolveSizeValueToPixels(win.size.height, container, "height");
+			} else {
+				// Fallback: skip bounds constraint if we can't resolve CSS units
+				if (
+					!(isNumericSize(win.size.width) && isNumericSize(win.size.height))
+				) {
+					return null;
+				}
+				resolvedWidth = win.size.width;
+				resolvedHeight = win.size.height;
+			}
+
 			return {
 				container: containerBounds,
-				windowSize: win.size,
+				windowSize: { width: resolvedWidth, height: resolvedHeight },
 				windowPosition: win.position,
 			};
 		},

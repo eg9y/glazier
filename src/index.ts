@@ -2,6 +2,7 @@
 export type {
 	Position,
 	Size,
+	SizeValue,
 	WindowState,
 	WindowManagerState,
 	WindowConfig,
@@ -52,6 +53,7 @@ export type {
 	UseDragOptions,
 	UseDragReturn,
 	ContainerBounds,
+	ResolvedSize,
 } from "./hooks/useDrag";
 export { useWindowDrag } from "./hooks/useWindowDrag";
 export type {
@@ -74,3 +76,10 @@ export { generateWindowId } from "./utils/id";
 export { validateWindowState } from "./utils/validateWindowState";
 export type { ValidationResult } from "./utils/validateWindowState";
 export { snapToGrid, gridToPixel, pixelToGrid } from "./utils/gridSnap";
+export {
+	isNumericSize,
+	toCSSValue,
+	resolveToPixels,
+	resolveSizeValueToPixels,
+	createPixelSize,
+} from "./utils/sizeUtils";
