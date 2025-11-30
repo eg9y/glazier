@@ -127,6 +127,12 @@ export function useWindowDrag({
 	// Track if we just restored from maximized to avoid double-moving
 	const justRestoredRef = useRef(false);
 
+	// Cache resolved window size during drag for performance
+	const resolvedWindowSizeRef = useRef<{
+		width: number;
+		height: number;
+	} | null>(null);
+
 	// Double-click detection
 	const lastClickTimeRef = useRef<number>(0);
 
@@ -218,7 +224,41 @@ export function useWindowDrag({
 		],
 	);
 
+	// Resolve and cache window size for bounds constraint calculations
+	const cacheResolvedWindowSize = useCallback(() => {
+		if (!win) {
+			resolvedWindowSizeRef.current = null;
+			return;
+		}
+		const container = boundsRef?.current;
+		if (container) {
+			resolvedWindowSizeRef.current = {
+				width: isNumericSize(win.size.width)
+					? win.size.width
+					: resolveSizeValueToPixels(win.size.width, container, "width"),
+				height: isNumericSize(win.size.height)
+					? win.size.height
+					: resolveSizeValueToPixels(win.size.height, container, "height"),
+			};
+		} else if (
+			isNumericSize(win.size.width) &&
+			isNumericSize(win.size.height)
+		) {
+			resolvedWindowSizeRef.current = {
+				width: win.size.width,
+				height: win.size.height,
+			};
+		} else {
+			resolvedWindowSizeRef.current = null;
+		}
+	}, [win, boundsRef]);
+
 	const { isDragging, dragHandleProps } = useDrag({
+		onDragStart: () => {
+			// Resolve and cache window size at drag start for performance
+			// (avoids creating/removing DOM elements on every pointer move)
+			cacheResolvedWindowSize();
+		},
 		onDrag: (position: Position, delta: Position) => {
 			if (!win) {
 				return;
@@ -287,36 +327,14 @@ export function useWindowDrag({
 			}
 
 			const containerBounds = getContainerBounds();
-			if (!containerBounds) {
+			// Use cached resolved size (set in onDragStart) for performance
+			if (!(containerBounds && resolvedWindowSizeRef.current)) {
 				return null;
-			}
-
-			// Resolve window size to pixels if it contains CSS units
-			const container = boundsRef?.current;
-			let resolvedWidth: number;
-			let resolvedHeight: number;
-
-			if (container) {
-				resolvedWidth = isNumericSize(win.size.width)
-					? win.size.width
-					: resolveSizeValueToPixels(win.size.width, container, "width");
-				resolvedHeight = isNumericSize(win.size.height)
-					? win.size.height
-					: resolveSizeValueToPixels(win.size.height, container, "height");
-			} else {
-				// Fallback: skip bounds constraint if we can't resolve CSS units
-				if (
-					!(isNumericSize(win.size.width) && isNumericSize(win.size.height))
-				) {
-					return null;
-				}
-				resolvedWidth = win.size.width;
-				resolvedHeight = win.size.height;
 			}
 
 			return {
 				container: containerBounds,
-				windowSize: { width: resolvedWidth, height: resolvedHeight },
+				windowSize: resolvedWindowSizeRef.current,
 				windowPosition: win.position,
 			};
 		},
