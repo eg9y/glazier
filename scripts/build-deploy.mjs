@@ -2,7 +2,7 @@
 
 /**
  * Build script for Vercel deployment
- * Copies Storybook and Next.js example builds into the docs dist folder
+ * Copies Storybook and example builds into the docs dist folder
  */
 
 import { cpSync, existsSync, mkdirSync } from "node:fs";
@@ -15,6 +15,7 @@ const root = join(__dirname, "..");
 const docsDir = join(root, "apps/docs/dist");
 const storybookDir = join(root, "apps/storybook/storybook-static");
 const nextExampleDir = join(root, "apps/examples/next/out");
+const astroExampleDir = join(root, "apps/examples/astro/dist");
 
 console.log("📦 Building deployment assets...");
 
@@ -44,6 +45,17 @@ if (existsSync(nextExampleDir)) {
 	console.log("✅ Next.js example copied");
 } else {
 	console.log("⚠️  Next.js example build not found, skipping");
+}
+
+// Copy Astro example if it exists
+if (existsSync(astroExampleDir)) {
+	const astroDest = join(docsDir, "examples/astro");
+	console.log(`🚀 Copying Astro example to ${astroDest}`);
+	mkdirSync(astroDest, { recursive: true });
+	cpSync(astroExampleDir, astroDest, { recursive: true });
+	console.log("✅ Astro example copied");
+} else {
+	console.log("⚠️  Astro example build not found, skipping");
 }
 
 console.log("🎉 Deployment assets ready!");

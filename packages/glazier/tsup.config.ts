@@ -5,7 +5,7 @@ import path from "node:path";
 import { type Options, defineConfig } from "tsup";
 
 const common: Options = {
-	entry: ["src/index.ts"],
+	entry: ["src/index.ts", "src/server/index.ts"],
 	treeshake: true,
 	sourcemap: true,
 	minify: true,

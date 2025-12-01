@@ -13,8 +13,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Glazier Next.js Example",
-	description: "SEO-friendly desktop UI with Glazier and Next.js App Router",
+	title: {
+		default: "Glazier Next.js Example",
+		template: "%s | Glazier Next.js Example",
+	},
+	description:
+		"Glazier is a headless window management library for React. Build desktop-like UIs with draggable, resizable windows, taskbars, and desktop icons.",
+	openGraph: {
+		type: "website",
+		title: "Glazier Next.js Example",
+		description:
+			"Glazier is a headless window management library for React. Build desktop-like UIs with draggable, resizable windows, taskbars, and desktop icons.",
+	},
+	twitter: {
+		card: "summary",
+		title: "Glazier Next.js Example",
+		description:
+			"Glazier is a headless window management library for React. Build desktop-like UIs with draggable, resizable windows, taskbars, and desktop icons.",
+	},
 };
 
 export default function RootLayout({

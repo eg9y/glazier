@@ -12,14 +12,14 @@ import {
 	useWindowManager,
 } from "glazier";
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	AboutContent,
+	AstroFrameworkBadge,
+	AstroFrameworkDescription,
+	AstroFrameworkInfo,
 	ContactContent,
 	HomeContent,
-	NextFrameworkBadge,
-	NextFrameworkDescription,
-	NextFrameworkInfo,
 } from "./content";
 import { iconConfigs, pathMap, windowConfigs } from "../lib/windowConfigs";
 import { AboutWindow } from "./windows/AboutWindow";
@@ -45,6 +45,14 @@ interface DesktopShellProps {
  */
 export function DesktopShell({ initialWindowId }: DesktopShellProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	// Signal hydration complete to hide SEO content
+	useEffect(() => {
+		document.body.classList.add("glazier-hydrated");
+		return () => {
+			document.body.classList.remove("glazier-hydrated");
+		};
+	}, []);
 
 	// Initialize with the window matching the URL
 	const [initialWindows] = useState<WindowState[]>(() => [
@@ -144,10 +152,11 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 								cursor: isDragging ? "grabbing" : "pointer",
 								opacity: isDragging ? 0.7 : 1,
 							}}
-							className={`pointer-events-auto flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${isSelected
-								? "bg-blue-500/30 ring-1 ring-blue-400"
-								: "hover:bg-white/10"
-								}`}
+							className={`pointer-events-auto flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+								isSelected
+									? "bg-blue-500/30 ring-1 ring-blue-400"
+									: "hover:bg-white/10"
+							}`}
 						>
 							<DesktopIconImage icon={iconState.icon} />
 							<span className="w-full truncate text-center text-white text-xs">
@@ -182,11 +191,11 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 					const contentMap: Record<string, ReactNode> = {
 						home: (
 							<HomeContent
-								frameworkBadge={<NextFrameworkBadge />}
-								frameworkDescription={<NextFrameworkDescription />}
+								frameworkBadge={<AstroFrameworkBadge />}
+								frameworkDescription={<AstroFrameworkDescription />}
 							/>
 						),
-						about: <AboutContent frameworkInfo={<NextFrameworkInfo />} />,
+						about: <AboutContent frameworkInfo={<AstroFrameworkInfo />} />,
 						contact: <ContactContent />,
 					};
 
@@ -227,10 +236,11 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 										taskbarFocusWindow(win.id);
 									}
 								}}
-								className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm transition-colors ${win.id === activeWindowId
-									? "bg-white/20 text-white"
-									: "text-slate-400 hover:bg-white/10 hover:text-white"
-									}`}
+								className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm transition-colors ${
+									win.id === activeWindowId
+										? "bg-white/20 text-white"
+										: "text-slate-400 hover:bg-white/10 hover:text-white"
+								}`}
 							>
 								<span>{win.title}</span>
 								{win.displayState === "minimized" && (

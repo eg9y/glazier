@@ -1,0 +1,17 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { DesktopShell } from "../components/DesktopShell";
+import { validSlugs } from "../lib/windowConfigs";
+
+export function getStaticPaths() {
+	return validSlugs
+		.filter((slug) => slug !== "home")
+		.map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+---
+
+<Layout slug={slug}>
+	<DesktopShell client:load initialWindowId={slug!} />
+</Layout>

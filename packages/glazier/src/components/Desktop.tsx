@@ -6,6 +6,8 @@ import { type WindowState, isRegistryWindowState } from "../types";
 export interface DesktopRenderProps {
 	/** The window ID */
 	windowId: string;
+	/** The component ID used to resolve from registry */
+	componentId: string;
 	/** The resolved component from the registry */
 	component: ComponentType<{ windowId: string } & Record<string, unknown>>;
 	/** The component props from window state */
@@ -35,7 +37,7 @@ export interface DesktopProps {
  * @example
  * ```tsx
  * <Desktop>
- *   {({ component: Component, windowId, componentProps, windowState }) => (
+ *   {({ component: Component, windowId, componentId, componentProps, windowState }) => (
  *     <Window id={windowId}>
  *       <TitleBar title={windowState.title} />
  *       <Component windowId={windowId} {...componentProps} />
@@ -80,6 +82,7 @@ export function Desktop({ children, className, style }: DesktopProps) {
 					<Fragment key={windowState.id}>
 						{children({
 							windowId: windowState.id,
+							componentId: windowState.componentId,
 							component: Component,
 							componentProps: windowState.componentProps ?? {},
 							windowState,

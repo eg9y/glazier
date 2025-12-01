@@ -1,0 +1,126 @@
+---
+import "../styles/global.css";
+// Import React content components - Astro renders these server-side
+import {
+	HomeContent,
+	AboutContent,
+	ContactContent,
+	AstroFrameworkBadge,
+	AstroFrameworkDescription,
+	AstroFrameworkInfo,
+} from "../components/content";
+
+interface Props {
+	slug?: string;
+}
+
+const { slug = "home" } = Astro.props;
+
+/**
+ * SEO metadata for each page.
+ * Define metadata directly in the layout - this is the Astro native pattern.
+ */
+const seoMetadata: Record<string, { title: string; description: string }> = {
+	home: {
+		title: "Home | Glazier Astro Example",
+		description:
+			"Glazier is a headless window management library for React. Build desktop-like UIs with draggable, resizable windows, taskbars, and desktop icons.",
+	},
+	about: {
+		title: "About | Glazier Astro Example",
+		description:
+			"Learn about Glazier, a headless window management library for React. Build desktop-like UIs with draggable, resizable windows.",
+	},
+	contact: {
+		title: "Contact | Glazier Astro Example",
+		description:
+			"Get in touch with the Glazier team. We'd love to hear from you about your window management needs.",
+	},
+};
+
+const seo = seoMetadata[slug] || seoMetadata.home;
+
+// Map slug to the appropriate React content component with framework-specific props
+const contentMap: Record<string, any> = {
+	home: {
+		Component: HomeContent,
+		props: {
+			frameworkBadge: AstroFrameworkBadge({}),
+			frameworkDescription: AstroFrameworkDescription({}),
+		},
+	},
+	about: {
+		Component: AboutContent,
+		props: {
+			frameworkInfo: AstroFrameworkInfo({}),
+		},
+	},
+	contact: {
+		Component: ContactContent,
+		props: {},
+	},
+};
+
+const content = contentMap[slug] ?? contentMap.home;
+const { Component: ContentComponent, props: contentProps } = content;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content={seo.description} />
+
+		<!-- Open Graph / Social -->
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={seo.title} />
+		<meta property="og:description" content={seo.description} />
+
+		<!-- Twitter -->
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content={seo.title} />
+		<meta name="twitter:description" content={seo.description} />
+
+		<title>{seo.title}</title>
+
+		<!-- SEO content visibility: shown by default, hidden after React hydration -->
+		<style>
+			.seo-content {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				padding: 2rem;
+				max-width: 800px;
+				margin: 0 auto;
+				z-index: 1;
+				background: rgb(30 41 59); /* slate-800 */
+			}
+
+			/* Hide SEO content after React hydration */
+			.glazier-hydrated .seo-content {
+				display: none;
+			}
+
+			/* Desktop shell container */
+			.desktop-container {
+				position: relative;
+				z-index: 10;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Server-rendered SEO content using React components (visible to crawlers) -->
+		<div class="seo-content">
+			<ContentComponent {...contentProps} />
+		</div>
+
+		<!-- Interactive desktop shell (hydrates client-side) -->
+		<div class="desktop-container">
+			<slot />
+		</div>
+	</body>
+</html>
