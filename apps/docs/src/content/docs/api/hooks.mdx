@@ -9,18 +9,19 @@ Access the window manager context.
 
 ```tsx
 const {
-	state, // { windows: WindowState[], activeWindowId: string | null }
-	openWindow, // (config: WindowConfig) => void
-	closeWindow, // (id: string) => void
-	focusWindow, // (id: string) => void
-	updateWindow, // (id: string, updates: Partial<WindowState>) => void
-	bringToFront, // (id: string) => void
-	sendToBack, // (id: string) => void
-	minimizeWindow, // (id: string) => void
-	maximizeWindow, // (id: string) => void
-	restoreWindow, // (id: string) => void
-	getContainerBounds, // () => { width: number, height: number } | null
-	icons, // IconState[] - all desktop icons
+  state, // { windows: WindowState[], activeWindowId: string | null }
+  openWindow, // (config: WindowConfig) => void
+  closeWindow, // (id: string) => void
+  focusWindow, // (id: string) => void
+  updateWindow, // (id: string, updates: Partial<WindowState>) => void
+  bringToFront, // (id: string) => void
+  sendToBack, // (id: string) => void
+  minimizeWindow, // (id: string) => void
+  maximizeWindow, // (id: string) => void
+  restoreWindow, // (id: string) => void
+  getContainerBounds, // () => { width: number, height: number } | null
+  icons, // IconState[] - all desktop icons
+  deselectAllIcons, // () => void
 } = useWindowManager();
 ```
 
@@ -30,15 +31,102 @@ Convenience hook for a single window.
 
 ```tsx
 const {
-	id, // Window ID
-	title, // Window title
-	displayState, // "normal" | "minimized" | "maximized"
-	isFocused, // Whether this window is active
-	close, // () => void
-	minimize, // () => void
-	maximize, // () => void
-	restore, // () => void
+  id, // Window ID
+  title, // Window title
+  displayState, // "normal" | "minimized" | "maximized"
+  isFocused, // Whether this window is active
+  close, // () => void
+  minimize, // () => void
+  maximize, // () => void
+  restore, // () => void
 } = useWindow("window-1");
+```
+
+## useWindowFrame
+
+Access the WindowFrame context. Must be used within a `WindowFrame` component.
+
+```tsx
+const {
+  windowId, // Window ID
+  title, // Window title
+  displayState, // "normal" | "minimized" | "maximized"
+  isFocused, // Whether this window is active
+  close, // () => void
+  minimize, // () => void
+  maximize, // () => void
+  restore, // () => void
+  dragHandleRef, // Ref for drag handle element
+  dragHandleProps, // Props to spread on drag handle
+  activeSnapZone, // "left" | "right" | null
+} = useWindowFrame();
+```
+
+### Example: Custom Window Chrome
+
+```tsx
+function CustomTitleBar() {
+  const { title, close, dragHandleRef, dragHandleProps, isFocused } = useWindowFrame();
+
+  return (
+    <div
+      ref={dragHandleRef}
+      {...dragHandleProps}
+      className={`title-bar ${isFocused ? 'focused' : ''}`}
+    >
+      <span>{title}</span>
+      <button onClick={close}>×</button>
+    </div>
+  );
+}
+
+// Usage
+<WindowFrame windowId={windowId}>
+  <CustomTitleBar />
+  <Content>{children}</Content>
+</WindowFrame>
+```
+
+## useIconLauncher
+
+Handles the "open or focus existing window" pattern for desktop icons.
+
+```tsx
+const {
+  launch, // () => void - opens new or focuses existing
+  launchProps, // { onDoubleClick } - spread on icon element
+  isWindowOpen, // boolean - whether window exists
+  existingWindow, // WindowState | undefined
+} = useIconLauncher({ iconId: "icon-1" });
+```
+
+### Options
+
+| Option   | Type     | Description            |
+| -------- | -------- | ---------------------- |
+| `iconId` | `string` | Icon ID (required)     |
+
+### Example
+
+```tsx
+function DesktopIcon({ iconId, iconState, dragProps, onSelect }) {
+  const { launchProps, isWindowOpen } = useIconLauncher({ iconId });
+
+  return (
+    <div
+      {...dragProps}
+      {...launchProps}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect();
+      }}
+      className={isWindowOpen ? 'icon-active' : ''}
+    >
+      <IconImage />
+      <span>{iconState.label}</span>
+    </div>
+  );
+}
 ```
 
 ## useWindowDrag
@@ -47,18 +135,18 @@ Window-specific drag behavior with snap support.
 
 ```tsx
 const { isDragging, activeSnapZone, dragHandleProps } = useWindowDrag({
-	windowId: "window-1",
-	dragHandleRef: titleBarRef,
-	disableMaximizedDragRestore: false, // Allow dragging from maximized
-	enableDoubleClickMaximize: true, // Double-click title bar to maximize
-	enableSnapToEdges: true, // Snap to left/right edges
-	onSnapZoneEnter: (zone) => {}, // Called when entering snap zone
-	onSnapZoneLeave: () => {}, // Called when leaving snap zone
+  windowId: "window-1",
+  dragHandleRef: titleBarRef,
+  disableMaximizedDragRestore: false, // Allow dragging from maximized
+  enableDoubleClickMaximize: true, // Double-click title bar to maximize
+  enableSnapToEdges: true, // Snap to left/right edges
+  onSnapZoneEnter: (zone) => {}, // Called when entering snap zone
+  onSnapZoneLeave: () => {}, // Called when leaving snap zone
 });
 
 // Spread dragHandleProps onto your title bar element
 <div ref={titleBarRef} {...dragHandleProps}>
-	Title
+  Title
 </div>;
 ```
 
@@ -80,17 +168,17 @@ Resize handle behavior.
 
 ```tsx
 const { isResizing, resizeHandleProps } = useResize(
-	{ width: 400, height: 300 }, // Current size
-	{ x: 100, y: 100 }, // Current position
-	{
-		minWidth: 200,
-		minHeight: 150,
-		maxWidth: 800,
-		maxHeight: 600,
-		onResizeStart: () => {},
-		onResize: (size, position) => updateWindow(id, { size, position }),
-		onResizeEnd: (size, position) => {},
-	}
+  { width: 400, height: 300 }, // Current size
+  { x: 100, y: 100 }, // Current position
+  {
+    minWidth: 200,
+    minHeight: 150,
+    maxWidth: 800,
+    maxHeight: 600,
+    onResizeStart: () => {},
+    onResize: (size, position) => updateWindow(id, { size, position }),
+    onResizeEnd: (size, position) => {},
+  }
 );
 
 // Create resize handles for any direction
@@ -105,15 +193,15 @@ const { isResizing, resizeHandleProps } = useResize(
 
 ### Options
 
-| Option          | Type                                           | Description             |
-| --------------- | ---------------------------------------------- | ----------------------- |
-| `minWidth`      | `number`                                       | Minimum width           |
-| `minHeight`     | `number`                                       | Minimum height          |
-| `maxWidth`      | `number`                                       | Maximum width           |
-| `maxHeight`     | `number`                                       | Maximum height          |
-| `onResizeStart` | `() => void`                                   | Called when resize starts |
-| `onResize`      | `(size: Size, position: Position) => void`     | Called during resize    |
-| `onResizeEnd`   | `(size: Size, position: Position) => void`     | Called when resize ends |
+| Option          | Type                                       | Description               |
+| --------------- | ------------------------------------------ | ------------------------- |
+| `minWidth`      | `number`                                   | Minimum width             |
+| `minHeight`     | `number`                                   | Minimum height            |
+| `maxWidth`      | `number`                                   | Maximum width             |
+| `maxHeight`     | `number`                                   | Maximum height            |
+| `onResizeStart` | `() => void`                               | Called when resize starts |
+| `onResize`      | `(size: Size, position: Position) => void` | Called during resize      |
+| `onResizeEnd`   | `(size: Size, position: Position) => void` | Called when resize ends   |
 
 ## useDrag
 
@@ -121,11 +209,11 @@ Generic drag primitive (used internally by useWindowDrag).
 
 ```tsx
 const { isDragging, dragHandleProps } = useDrag({
-	onDragStart: () => {},
-	onDrag: (position, delta) => {},
-	onDragEnd: () => {},
-	getBoundsConstraint: () => ({ container, windowSize, windowPosition }),
-	onConstrainToBounds: (correctedPosition) => {},
+  onDragStart: () => {},
+  onDrag: (position, delta) => {},
+  onDragEnd: () => {},
+  getBoundsConstraint: () => ({ container, windowSize, windowPosition }),
+  onConstrainToBounds: (correctedPosition) => {},
 });
 ```
 
@@ -135,13 +223,13 @@ Access and control a single desktop icon.
 
 ```tsx
 const {
-	iconState, // The icon's current state
-	isSelected, // Whether icon is selected
-	select, // (multiSelect?: boolean) => void
-	deselect, // () => void
-	toggleSelect, // () => void
-	launch, // () => void - opens associated window
-	updatePosition, // (position: Position) => void
+  iconState, // The icon's current state
+  isSelected, // Whether icon is selected
+  select, // (multiSelect?: boolean) => void
+  deselect, // () => void
+  toggleSelect, // () => void
+  launch, // () => void - opens associated window
+  updatePosition, // (position: Position) => void
 } = useDesktopIcon("icon-1");
 ```
 
@@ -151,22 +239,127 @@ Drag behavior for desktop icons with optional grid snapping.
 
 ```tsx
 const { isDragging, wasDragged, dragHandleProps } = useIconDrag({
-	iconId: "icon-1",
-	gridConfig: { cellWidth: 80, cellHeight: 90, gap: 10 },
-	snapOnDrop: true, // Snap only when released (default)
-	onDragStart: (position) => {},
-	onDrag: (position) => {},
-	onDragEnd: (position) => {},
+  iconId: "icon-1",
+  gridConfig: { cellWidth: 80, cellHeight: 90, gap: 10 },
+  snapOnDrop: true, // Snap only when released (default)
+  onDragStart: (position) => {},
+  onDrag: (position) => {},
+  onDragEnd: (position) => {},
 });
 ```
 
 ### Options
 
-| Option        | Type                           | Default | Description               |
-| ------------- | ------------------------------ | ------- | ------------------------- |
-| `iconId`      | `string`                       | -       | Icon ID (required)        |
-| `gridConfig`  | `GridConfig`                   | -       | Grid configuration        |
-| `snapOnDrop`  | `boolean`                      | `true`  | Snap only when released   |
-| `onDragStart` | `(position: Position) => void` | -       | Called when drag starts   |
-| `onDrag`      | `(position: Position) => void` | -       | Called during drag        |
-| `onDragEnd`   | `(position: Position) => void` | -       | Called when drag ends     |
+| Option        | Type                           | Default | Description             |
+| ------------- | ------------------------------ | ------- | ----------------------- |
+| `iconId`      | `string`                       | -       | Icon ID (required)      |
+| `gridConfig`  | `GridConfig`                   | -       | Grid configuration      |
+| `snapOnDrop`  | `boolean`                      | `true`  | Snap only when released |
+| `onDragStart` | `(position: Position) => void` | -       | Called when drag starts |
+| `onDrag`      | `(position: Position) => void` | -       | Called during drag      |
+| `onDragEnd`   | `(position: Position) => void` | -       | Called when drag ends   |
+
+## useWindowRouting
+
+URL synchronization hook for window focus changes.
+
+```tsx
+const { syncUrl } = useWindowRouting({
+  adapter: routingAdapter, // RoutingAdapter instance
+  pathMap: { home: "/", about: "/about" },
+  enabled: true,
+});
+```
+
+### Options
+
+| Option    | Type                         | Default | Description               |
+| --------- | ---------------------------- | ------- | ------------------------- |
+| `adapter` | `RoutingAdapter`             | -       | Routing adapter (required) |
+| `pathMap` | `Record<string, string>`     | -       | Window ID to path mapping  |
+| `enabled` | `boolean`                    | `true`  | Enable URL sync           |
+
+### RoutingAdapter Interface
+
+```tsx
+interface RoutingAdapter {
+  navigate: (path: string) => void;
+  getCurrentPath: () => string;
+}
+```
+
+## Utility Functions
+
+### createRegistry
+
+Create a type-safe component registry.
+
+```tsx
+import { createRegistry } from 'glazier';
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  home: { title: 'Home', ... },
+  settings: { title: 'Settings', ... },
+});
+
+// TypeScript ensures all IDs have components
+const registry = createRegistry(windows.ids, {
+  home: HomeWindow,
+  settings: SettingsWindow,
+});
+```
+
+### createBrowserAdapter
+
+Create a browser-based routing adapter.
+
+```tsx
+import { createBrowserAdapter } from 'glazier';
+
+const routingAdapter = createBrowserAdapter();
+
+// Use in onFocusChange
+<WindowManagerProvider
+  onFocusChange={(windowId) => {
+    if (windowId) {
+      const path = pathMap[windowId];
+      if (path) routingAdapter.navigate(path);
+    }
+  }}
+>
+```
+
+### defineWindows
+
+Unified configuration helper. Import from `glazier/server` for server-component compatibility.
+
+```tsx
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  home: {
+    title: 'Home',
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: '/',
+    icon: {
+      label: 'Home',
+      iconKey: 'home',
+      position: { x: 20, y: 20 },
+    },
+    defaultProps: { theme: 'dark' },
+  },
+});
+
+// Methods
+windows.ids;                      // ['home']
+windows.has('home');              // true
+windows.getWindowState('home');   // WindowState
+windows.getIconConfigs();         // IconState[]
+windows.getIconConfig('home');    // IconState | undefined
+windows.getPathMap();             // { home: '/' }
+windows.getPathToIdMap();         // { '/': 'home' }
+windows.getValidSlugs();          // [] (excludes '/')
+windows.getIdFromPath('/');       // 'home'
+```

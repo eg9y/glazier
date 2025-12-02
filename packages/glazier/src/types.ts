@@ -68,6 +68,72 @@ export type WindowConfigRegistry = Record<
 	Omit<WindowConfig, "id" | "componentId">
 >;
 
+// ============================================================================
+// Type-Safe Registry Types
+// ============================================================================
+
+/**
+ * Base props that all window components must accept.
+ */
+export interface WindowComponentBaseProps {
+	windowId: string;
+}
+
+/**
+ * Type-safe registry with constrained component IDs.
+ * Use this instead of WindowRegistry for better type safety.
+ *
+ * @example
+ * ```typescript
+ * type MyComponentIds = 'home' | 'about' | 'contact';
+ *
+ * interface MyWindowProps extends WindowComponentBaseProps {
+ *   onSnapZoneChange?: (zone: 'left' | 'right' | null) => void;
+ *   children?: ReactNode;
+ * }
+ *
+ * const registry: TypedWindowRegistry<MyComponentIds, MyWindowProps> = {
+ *   home: HomeWindow,
+ *   about: AboutWindow,
+ *   contact: ContactWindow,
+ * };
+ * ```
+ */
+export type TypedWindowRegistry<
+	TComponentIds extends string,
+	TProps extends WindowComponentBaseProps = WindowComponentBaseProps,
+> = {
+	[K in TComponentIds]: ComponentType<TProps>;
+};
+
+/**
+ * Create a type-safe registry from component IDs.
+ * Provides compile-time checking that all required components are provided.
+ *
+ * @example
+ * ```typescript
+ * const windows = defineWindows({
+ *   home: { ... },
+ *   about: { ... },
+ * });
+ *
+ * // Type-safe: only 'home' | 'about' keys allowed
+ * const registry = createRegistry(windows.ids, {
+ *   home: HomeWindow,
+ *   about: AboutWindow,
+ * });
+ * ```
+ */
+export function createRegistry<
+	TIds extends string,
+	TProps extends WindowComponentBaseProps = WindowComponentBaseProps,
+>(
+	_ids: readonly TIds[],
+	components: { [K in TIds]: ComponentType<TProps> },
+): TypedWindowRegistry<TIds, TProps> {
+	return components;
+}
+
 /**
  * Type guard to check if a window state uses registry-based rendering.
  */

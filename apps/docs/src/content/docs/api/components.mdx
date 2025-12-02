@@ -9,30 +9,30 @@ Root provider that manages all window state.
 
 ```tsx
 <WindowManagerProvider
-	boundsRef={containerRef}
-	registry={appRegistry}
-	defaultWindows={initialWindows}
-	defaultIcons={initialIcons}
-	defaultWindowConfigs={windowConfigs}
-	initialFocusedWindowId="window-1"
-	onFocusChange={(windowId) => console.log("Focus:", windowId)}
+  boundsRef={containerRef}
+  registry={appRegistry}
+  defaultWindows={initialWindows}
+  defaultIcons={initialIcons}
+  defaultWindowConfigs={windowConfigs}
+  initialFocusedWindowId="window-1"
+  onFocusChange={(windowId) => console.log("Focus:", windowId)}
 >
-	{children}
+  {children}
 </WindowManagerProvider>
 ```
 
 ### Props
 
-| Prop                   | Type                                | Description                          |
-| ---------------------- | ----------------------------------- | ------------------------------------ |
-| `children`             | `ReactNode`                         | Child components                     |
-| `defaultWindows`       | `WindowState[]`                     | Initial windows to render            |
-| `defaultIcons`         | `IconState[]`                       | Initial desktop icons                |
-| `registry`             | `WindowRegistry`                    | Component registry for Desktop       |
-| `defaultWindowConfigs` | `WindowConfigRegistry`              | Default window configs by componentId |
-| `boundsRef`            | `RefObject<HTMLElement>`            | Container for bounds constraints     |
-| `initialFocusedWindowId` | `string`                          | Which window to focus initially      |
-| `onFocusChange`        | `(windowId: string \| null) => void` | Callback when focus changes          |
+| Prop                     | Type                                 | Description                            |
+| ------------------------ | ------------------------------------ | -------------------------------------- |
+| `children`               | `ReactNode`                          | Child components                       |
+| `defaultWindows`         | `WindowState[]`                      | Initial windows to render              |
+| `defaultIcons`           | `IconState[]`                        | Initial desktop icons                  |
+| `registry`               | `WindowRegistry`                     | Component registry for Desktop         |
+| `defaultWindowConfigs`   | `WindowConfigRegistry`               | Default window configs by componentId  |
+| `boundsRef`              | `RefObject<HTMLElement>`             | Container for bounds constraints       |
+| `initialFocusedWindowId` | `string`                             | Which window to focus initially        |
+| `onFocusChange`          | `(windowId: string \| null) => void` | Callback when focus changes            |
 
 ## Window
 
@@ -40,18 +40,189 @@ Positioning container for a single window.
 
 ```tsx
 <Window id="window-1" className="my-window" style={{ background: "white" }}>
-	{/* Window content */}
+  {/* Window content */}
 </Window>
 ```
 
 ### Props
 
-| Prop        | Type            | Description                           |
-| ----------- | --------------- | ------------------------------------- |
-| `id`        | `string`        | Window ID (must match state)          |
-| `children`  | `ReactNode`     | Window content                        |
-| `className` | `string`        | Optional CSS class                    |
-| `style`     | `CSSProperties` | Optional inline styles                |
+| Prop        | Type            | Description                  |
+| ----------- | --------------- | ---------------------------- |
+| `id`        | `string`        | Window ID (must match state) |
+| `children`  | `ReactNode`     | Window content               |
+| `className` | `string`        | Optional CSS class           |
+| `style`     | `CSSProperties` | Optional inline styles       |
+
+## WindowFrame
+
+Container for window chrome with built-in drag context. Use with `TitleBar`, `Content`, and `ResizeHandles`.
+
+```tsx
+<WindowFrame
+  windowId={windowId}
+  enableDoubleClickMaximize
+  enableSnapToEdges
+  onSnapZoneChange={(zone) => setSnapPreview(zone)}
+>
+  <TitleBar>...</TitleBar>
+  <Content>...</Content>
+  <ResizeHandles windowId={windowId} />
+</WindowFrame>
+```
+
+### Props
+
+| Prop                        | Type                                        | Default | Description                     |
+| --------------------------- | ------------------------------------------- | ------- | ------------------------------- |
+| `windowId`                  | `string`                                    | -       | Window ID (required)            |
+| `children`                  | `ReactNode`                                 | -       | TitleBar, Content, ResizeHandles |
+| `className`                 | `string`                                    | -       | Optional CSS class              |
+| `style`                     | `CSSProperties`                             | -       | Optional inline styles          |
+| `enableDoubleClickMaximize` | `boolean`                                   | `true`  | Double-click title to maximize  |
+| `enableSnapToEdges`         | `boolean`                                   | `true`  | Enable edge snapping            |
+| `onSnapZoneChange`          | `(zone: 'left' \| 'right' \| null) => void` | -       | Snap zone change callback       |
+
+## TitleBar
+
+Draggable title bar component. Must be used within `WindowFrame`.
+
+```tsx
+<TitleBar className="h-10 bg-slate-900 px-3">
+  <Title />
+  <WindowControls />
+</TitleBar>
+```
+
+### Props
+
+| Prop        | Type            | Description            |
+| ----------- | --------------- | ---------------------- |
+| `children`  | `ReactNode`     | Title, controls, etc.  |
+| `className` | `string`        | Optional CSS class     |
+| `style`     | `CSSProperties` | Optional inline styles |
+
+## Title
+
+Renders the window title from context. Must be used within `WindowFrame`.
+
+```tsx
+<Title className="text-white font-medium" />
+
+{/* Or with custom content */}
+<Title>
+  <Icon /> Custom Title
+</Title>
+```
+
+### Props
+
+| Prop        | Type            | Description                    |
+| ----------- | --------------- | ------------------------------ |
+| `children`  | `ReactNode`     | Custom content (overrides title) |
+| `className` | `string`        | Optional CSS class             |
+| `style`     | `CSSProperties` | Optional inline styles         |
+
+## WindowControls
+
+Pre-built minimize, maximize, and close buttons. Must be used within `WindowFrame`.
+
+```tsx
+<WindowControls
+  className="flex gap-1"
+  buttonClassName="p-1 rounded hover:bg-slate-700"
+  closeButtonClassName="hover:bg-red-600"
+/>
+
+{/* Show only some controls */}
+<WindowControls controls={['minimize', 'close']} />
+
+{/* Custom icons */}
+<WindowControls
+  icons={{
+    minimize: <MinusIcon />,
+    maximize: <ExpandIcon />,
+    restore: <ShrinkIcon />,
+    close: <XIcon />,
+  }}
+/>
+```
+
+### Props
+
+| Prop                   | Type                                           | Default                              | Description                |
+| ---------------------- | ---------------------------------------------- | ------------------------------------ | -------------------------- |
+| `controls`             | `('minimize' \| 'maximize' \| 'close')[]`      | `['minimize', 'maximize', 'close']`  | Which controls to show     |
+| `icons`                | `{ minimize?, maximize?, restore?, close? }`   | Built-in SVGs                        | Custom icons               |
+| `className`            | `string`                                       | -                                    | Container class            |
+| `style`                | `CSSProperties`                                | -                                    | Container styles           |
+| `buttonClassName`      | `string`                                       | -                                    | Class for all buttons      |
+| `buttonStyle`          | `CSSProperties`                                | -                                    | Styles for all buttons     |
+| `closeButtonClassName` | `string`                                       | -                                    | Additional class for close |
+
+## Content
+
+Content area wrapper for window body. Must be used within `WindowFrame`.
+
+```tsx
+<Content className="p-4 overflow-auto">
+  {children}
+</Content>
+```
+
+### Props
+
+| Prop        | Type            | Description            |
+| ----------- | --------------- | ---------------------- |
+| `children`  | `ReactNode`     | Content to render      |
+| `className` | `string`        | Optional CSS class     |
+| `style`     | `CSSProperties` | Optional inline styles |
+
+## ResizeHandles
+
+Pre-built resize handles for all 8 directions.
+
+```tsx
+<ResizeHandles
+  windowId={windowId}
+  minWidth={300}
+  minHeight={200}
+  maxWidth={800}
+  maxHeight={600}
+/>
+
+{/* Custom styling */}
+<ResizeHandles
+  windowId={windowId}
+  className="hover:bg-blue-500/20"
+  directionClassNames={{ se: "bg-blue-500/50" }}
+/>
+
+{/* Custom render */}
+<ResizeHandles
+  windowId={windowId}
+  renderHandle={({ direction, handleProps, style }) => (
+    <div {...handleProps} style={style} data-direction={direction} />
+  )}
+/>
+```
+
+### Props
+
+| Prop                  | Type                                              | Default | Description                  |
+| --------------------- | ------------------------------------------------- | ------- | ---------------------------- |
+| `windowId`            | `string`                                          | -       | Window ID (required)         |
+| `thickness`           | `number`                                          | `4`     | Edge handle thickness (px)   |
+| `cornerSize`          | `number`                                          | `8`     | Corner handle size (px)      |
+| `directions`          | `ResizeDirection[]`                               | All 8   | Which handles to render      |
+| `hideWhenMaximized`   | `boolean`                                         | `true`  | Hide when maximized          |
+| `minWidth`            | `number \| string`                                | `100`   | Minimum width                |
+| `minHeight`           | `number \| string`                                | `50`    | Minimum height               |
+| `maxWidth`            | `number \| string`                                | -       | Maximum width                |
+| `maxHeight`           | `number \| string`                                | -       | Maximum height               |
+| `className`           | `string`                                          | -       | Class for all handles        |
+| `directionClassNames` | `Partial<Record<ResizeDirection, string>>`        | -       | Per-direction classes        |
+| `directionStyles`     | `Partial<Record<ResizeDirection, CSSProperties>>` | -       | Per-direction styles         |
+| `renderHandle`        | `(props) => ReactNode`                            | -       | Custom render function       |
 
 ## Desktop
 
@@ -59,30 +230,31 @@ Auto-renders windows from the registry based on `componentId`.
 
 ```tsx
 <Desktop className="desktop-area" style={{ height: "100%" }}>
-	{({ component: Component, windowId, componentProps, windowState }) => (
-		<Window id={windowId}>
-			<Component windowId={windowId} {...componentProps} />
-		</Window>
-	)}
+  {({ component: Component, windowId, componentProps, windowState }) => (
+    <Window id={windowId}>
+      <Component windowId={windowId} {...componentProps} />
+    </Window>
+  )}
 </Desktop>
 ```
 
 ### Props
 
-| Prop        | Type                                      | Description            |
-| ----------- | ----------------------------------------- | ---------------------- |
+| Prop        | Type                                       | Description            |
+| ----------- | ------------------------------------------ | ---------------------- |
 | `children`  | `(props: DesktopRenderProps) => ReactNode` | Render function        |
-| `className` | `string`                                  | Optional CSS class     |
-| `style`     | `CSSProperties`                           | Optional inline styles |
+| `className` | `string`                                   | Optional CSS class     |
+| `style`     | `CSSProperties`                            | Optional inline styles |
 
 ### Render Props
 
-| Prop             | Type            | Description                    |
-| ---------------- | --------------- | ------------------------------ |
-| `component`      | `ComponentType` | The resolved React component   |
-| `windowId`       | `string`        | The window's ID                |
-| `componentProps` | `object`        | Props to pass to the component |
-| `windowState`    | `WindowState`   | Full window state object       |
+| Prop             | Type            | Description                  |
+| ---------------- | --------------- | ---------------------------- |
+| `component`      | `ComponentType` | The resolved React component |
+| `windowId`       | `string`        | The window's ID              |
+| `componentId`    | `string`        | The component ID             |
+| `componentProps` | `object`        | Props to pass to component   |
+| `windowState`    | `WindowState`   | Full window state object     |
 
 ## Taskbar
 
@@ -90,28 +262,28 @@ Headless taskbar component with render props.
 
 ```tsx
 <Taskbar>
-	{({ windows, activeWindowId, focusWindow, minimizeWindow, restoreWindow, closeWindow }) => (
-		<div className="taskbar">
-			{windows.map((w) => (
-				<button key={w.id} onClick={() => focusWindow(w.id)}>
-					{w.title}
-				</button>
-			))}
-		</div>
-	)}
+  {({ windows, activeWindowId, focusWindow, minimizeWindow, restoreWindow, closeWindow }) => (
+    <div className="taskbar">
+      {windows.map((w) => (
+        <button key={w.id} onClick={() => focusWindow(w.id)}>
+          {w.title}
+        </button>
+      ))}
+    </div>
+  )}
 </Taskbar>
 ```
 
 ### Render Props
 
-| Prop             | Type                      | Description              |
-| ---------------- | ------------------------- | ------------------------ |
-| `windows`        | `WindowState[]`           | Array of all windows     |
-| `activeWindowId` | `string \| null`          | Currently focused window |
-| `focusWindow`    | `(id: string) => void`    | Focus a window           |
-| `minimizeWindow` | `(id: string) => void`    | Minimize a window        |
-| `restoreWindow`  | `(id: string) => void`    | Restore a window         |
-| `closeWindow`    | `(id: string) => void`    | Close a window           |
+| Prop             | Type                   | Description              |
+| ---------------- | ---------------------- | ------------------------ |
+| `windows`        | `WindowState[]`        | Array of all windows     |
+| `activeWindowId` | `string \| null`       | Currently focused window |
+| `focusWindow`    | `(id: string) => void` | Focus a window           |
+| `minimizeWindow` | `(id: string) => void` | Minimize a window        |
+| `restoreWindow`  | `(id: string) => void` | Restore a window         |
+| `closeWindow`    | `(id: string) => void` | Close a window           |
 
 ## SnapPreviewOverlay
 
@@ -119,17 +291,17 @@ Visual preview overlay for snap zones during drag.
 
 ```tsx
 <SnapPreviewOverlay
-	zone={snapZone} // "left" | "right" | null
-	style={{ background: "rgba(0, 100, 255, 0.2)" }}
+  zone={snapZone} // "left" | "right" | null
+  style={{ background: "rgba(0, 100, 255, 0.2)" }}
 />
 ```
 
 ### Props
 
-| Prop    | Type                         | Description            |
-| ------- | ---------------------------- | ---------------------- |
-| `zone`  | `"left" \| "right" \| null`  | Active snap zone       |
-| `style` | `CSSProperties`              | Optional inline styles |
+| Prop    | Type                        | Description            |
+| ------- | --------------------------- | ---------------------- |
+| `zone`  | `"left" \| "right" \| null` | Active snap zone       |
+| `style` | `CSSProperties`             | Optional inline styles |
 
 ## DesktopIcon
 
@@ -137,39 +309,39 @@ Headless component for individual desktop icons.
 
 ```tsx
 <DesktopIcon
-	id="icon-1"
-	gridConfig={{ cellWidth: 80, cellHeight: 90, gap: 8 }}
-	snapOnDrop={true}
+  id="icon-1"
+  gridConfig={{ cellWidth: 80, cellHeight: 90, gap: 8 }}
+  snapOnDrop={true}
 >
-	{({ iconState, isSelected, isDragging, wasDragged, dragProps, onLaunch }) => (
-		<div {...dragProps} onClick={() => !wasDragged && onLaunch()}>
-			{iconState.label}
-		</div>
-	)}
+  {({ iconState, isSelected, isDragging, wasDragged, dragProps, onLaunch }) => (
+    <div {...dragProps} onClick={() => !wasDragged && onLaunch()}>
+      {iconState.label}
+    </div>
+  )}
 </DesktopIcon>
 ```
 
 ### Props
 
-| Prop         | Type                                        | Description                |
-| ------------ | ------------------------------------------- | -------------------------- |
-| `id`         | `string`                                    | Icon ID                    |
-| `children`   | `(props: DesktopIconRenderProps) => ReactNode` | Render function            |
-| `gridConfig` | `GridConfig`                                | Grid configuration         |
-| `snapOnDrop` | `boolean`                                   | Snap only on drop          |
+| Prop         | Type                                           | Description        |
+| ------------ | ---------------------------------------------- | ------------------ |
+| `id`         | `string`                                       | Icon ID            |
+| `children`   | `(props: DesktopIconRenderProps) => ReactNode` | Render function    |
+| `gridConfig` | `GridConfig`                                   | Grid configuration |
+| `snapOnDrop` | `boolean`                                      | Snap only on drop  |
 
 ### Render Props
 
-| Prop         | Type                     | Description                        |
-| ------------ | ------------------------ | ---------------------------------- |
-| `iconId`     | `string`                 | Icon ID                            |
-| `iconState`  | `IconState`              | Full icon state                    |
-| `isSelected` | `boolean`                | Whether selected                   |
-| `isDragging` | `boolean`                | Whether being dragged              |
-| `wasDragged` | `boolean`                | Whether moved (prevent click)      |
-| `dragProps`  | `object`                 | Props for drag element             |
-| `onSelect`   | `(multiSelect?) => void` | Select handler                     |
-| `onLaunch`   | `() => void`             | Launch window                      |
+| Prop         | Type                      | Description                   |
+| ------------ | ------------------------- | ----------------------------- |
+| `iconId`     | `string`                  | Icon ID                       |
+| `iconState`  | `IconState`               | Full icon state               |
+| `isSelected` | `boolean`                 | Whether selected              |
+| `isDragging` | `boolean`                 | Whether being dragged         |
+| `wasDragged` | `boolean`                 | Whether moved (prevent click) |
+| `dragProps`  | `object`                  | Props for drag element        |
+| `onSelect`   | `(multiSelect?) => void`  | Select handler                |
+| `onLaunch`   | `() => void`              | Launch window                 |
 
 ## DesktopIconGrid
 
@@ -177,43 +349,43 @@ Container that renders all icons with grid awareness.
 
 ```tsx
 <DesktopIconGrid
-	grid={{ cellWidth: 80, cellHeight: 90, gap: 8 }}
-	snapToGrid={true}
-	className="icon-grid"
+  grid={{ cellWidth: 80, cellHeight: 90, gap: 8 }}
+  snapToGrid={true}
+  className="icon-grid"
 >
-	{({ iconState, pixelPosition, gridPosition, isSelected, dragProps, openOrFocus }) => (
-		<div
-			{...dragProps}
-			style={{
-				position: "absolute",
-				left: pixelPosition.x,
-				top: pixelPosition.y,
-			}}
-			onDoubleClick={openOrFocus}
-		>
-			{iconState.label}
-		</div>
-	)}
+  {({ iconState, pixelPosition, gridPosition, isSelected, dragProps, openOrFocus }) => (
+    <div
+      {...dragProps}
+      style={{
+        position: "absolute",
+        left: pixelPosition.x,
+        top: pixelPosition.y,
+      }}
+      onDoubleClick={openOrFocus}
+    >
+      {iconState.label}
+    </div>
+  )}
 </DesktopIconGrid>
 ```
 
 ### Props
 
-| Prop         | Type                                            | Description          |
-| ------------ | ----------------------------------------------- | -------------------- |
+| Prop         | Type                                               | Description          |
+| ------------ | -------------------------------------------------- | -------------------- |
 | `children`   | `(props: DesktopIconGridRenderProps) => ReactNode` | Render function      |
-| `grid`       | `GridConfig`                                    | Grid configuration   |
-| `snapToGrid` | `boolean`                                       | Enable grid snapping |
-| `className`  | `string`                                        | Optional CSS class   |
-| `style`      | `CSSProperties`                                 | Optional styles      |
+| `grid`       | `GridConfig`                                       | Grid configuration   |
+| `snapToGrid` | `boolean`                                          | Enable grid snapping |
+| `className`  | `string`                                           | Optional CSS class   |
+| `style`      | `CSSProperties`                                    | Optional styles      |
 
 ### Render Props
 
 Extends `DesktopIconRenderProps` with:
 
-| Prop            | Type                  | Description                |
-| --------------- | --------------------- | -------------------------- |
-| `gridPosition`  | `{ row, column }`     | Position in grid           |
-| `pixelPosition` | `Position`            | Current pixel position     |
-| `isWindowOpen`  | `boolean`             | Whether window is open     |
-| `openOrFocus`   | `() => void`          | Opens or focuses window    |
+| Prop            | Type              | Description             |
+| --------------- | ----------------- | ----------------------- |
+| `gridPosition`  | `{ row, column }` | Position in grid        |
+| `pixelPosition` | `Position`        | Current pixel position  |
+| `isWindowOpen`  | `boolean`         | Whether window is open  |
+| `openOrFocus`   | `() => void`      | Opens or focuses window |

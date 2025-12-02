@@ -28,6 +28,15 @@ Glazier provides unstyled, fully accessible window management components for Rea
 - **Headless design** - zero styles included, full control over appearance
 - **TypeScript** - fully typed API
 
+### New in Latest Version
+
+- **`defineWindows`** - Unified configuration helper for windows, icons, and routes
+- **`WindowFrame` composables** - Pre-built primitives (TitleBar, Title, WindowControls, Content) that reduce boilerplate
+- **`ResizeHandles`** - Ready-to-use resize handles component
+- **`useIconLauncher`** - Hook for "open or focus" desktop icon pattern
+- **`createRegistry`** - Type-safe component registry helper
+- **`createBrowserAdapter`** - Framework-agnostic URL routing adapter
+
 ## Installation
 
 ```bash
@@ -43,6 +52,93 @@ yarn add glazier
 ```
 
 ## Quick Start
+
+### Option 1: Using WindowFrame Composables (Recommended)
+
+The new `WindowFrame` system dramatically reduces boilerplate:
+
+```tsx
+import { useRef } from 'react';
+import {
+  WindowManagerProvider,
+  Window,
+  Desktop,
+  WindowFrame,
+  TitleBar,
+  Title,
+  WindowControls,
+  Content,
+  ResizeHandles,
+  createRegistry,
+} from 'glazier';
+import { defineWindows } from 'glazier/server';
+
+// Define all windows in one place
+const windows = defineWindows({
+  home: {
+    title: 'Home',
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: '/',
+    icon: { label: 'Home', iconKey: 'home', position: { x: 20, y: 20 } },
+  },
+  settings: {
+    title: 'Settings',
+    defaultPosition: { x: 150, y: 150 },
+    defaultSize: { width: 350, height: 400 },
+    path: '/settings',
+  },
+});
+
+// Type-safe registry
+const registry = createRegistry(windows.ids, {
+  home: HomeWindow,
+  settings: SettingsWindow,
+});
+
+function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <WindowManagerProvider
+      boundsRef={containerRef}
+      registry={registry}
+      defaultWindows={[windows.getWindowState('home')]}
+      defaultIcons={windows.getIconConfigs()}
+    >
+      <div ref={containerRef} style={{ position: 'relative', height: '100vh' }}>
+        <Desktop>
+          {({ windowId, component: Component }) => (
+            <Window id={windowId}>
+              <Component windowId={windowId} />
+            </Window>
+          )}
+        </Desktop>
+      </div>
+    </WindowManagerProvider>
+  );
+}
+
+// Window with minimal boilerplate using WindowFrame
+function HomeWindow({ windowId }: { windowId: string }) {
+  return (
+    <WindowFrame windowId={windowId} enableDoubleClickMaximize enableSnapToEdges>
+      <TitleBar className="bg-slate-900 h-10 px-3">
+        <Title className="text-white" />
+        <WindowControls />
+      </TitleBar>
+      <Content className="p-4">
+        <h1>Welcome!</h1>
+      </Content>
+      <ResizeHandles windowId={windowId} minWidth={300} minHeight={200} />
+    </WindowFrame>
+  );
+}
+```
+
+### Option 2: Manual Control (Full Flexibility)
+
+For complete control over every aspect:
 
 ```tsx
 import { useRef } from 'react';
@@ -120,16 +216,105 @@ function MyWindow({ windowId }: { windowId: string }) {
 
 Glazier provides behavior, not appearance. Components handle positioning, state management, and user interactions-you provide all styling. This gives you complete control over the look and feel.
 
-### Component Registry Pattern
+### defineWindows - Unified Configuration
 
-For apps with multiple window types, use the registry pattern. Define components once, then open windows by referencing their `componentId`. This makes window state fully serializable (great for localStorage or URL persistence).
+Instead of maintaining separate configs for windows, icons, and routes:
 
 ```tsx
-const registry = {
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  home: {
+    title: 'Home',
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: '/',
+    icon: {
+      label: 'Home',
+      iconKey: 'home',
+      position: { x: 20, y: 20 },
+    },
+  },
+  about: {
+    title: 'About',
+    defaultPosition: { x: 150, y: 150 },
+    defaultSize: { width: 480, height: 380 },
+    path: '/about',
+    icon: {
+      label: 'About',
+      iconKey: 'about',
+      position: { x: 20, y: 120 },
+    },
+  },
+});
+
+// Use the helpers
+windows.getWindowState('home');     // WindowState for opening
+windows.getIconConfigs();           // All icon configs
+windows.getPathMap();               // { home: '/', about: '/about' }
+windows.getValidSlugs();            // ['about'] (excludes '/')
+windows.has('home');                // true
+windows.ids;                        // ['home', 'about']
+```
+
+### WindowFrame Composables
+
+Reduce window chrome boilerplate from ~70 lines to ~15:
+
+```tsx
+import {
+  WindowFrame,
+  TitleBar,
+  Title,
+  WindowControls,
+  Content,
+  ResizeHandles,
+} from 'glazier';
+
+function MyWindow({ windowId }: { windowId: string }) {
+  return (
+    <WindowFrame
+      windowId={windowId}
+      enableDoubleClickMaximize
+      enableSnapToEdges
+      onSnapZoneChange={(zone) => console.log('Snap zone:', zone)}
+    >
+      <TitleBar className="h-10 bg-slate-900">
+        <Title />
+        <WindowControls
+          buttonClassName="hover:bg-slate-700"
+          closeButtonClassName="hover:bg-red-600"
+        />
+      </TitleBar>
+      <Content className="overflow-auto p-4">
+        Your content here
+      </Content>
+      <ResizeHandles windowId={windowId} minWidth={300} minHeight={200} />
+    </WindowFrame>
+  );
+}
+```
+
+### Component Registry Pattern
+
+For apps with multiple window types, use the registry pattern with type safety:
+
+```tsx
+import { createRegistry } from 'glazier';
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  settings: { title: 'Settings', ... },
+  terminal: { title: 'Terminal', ... },
+  notes: { title: 'Notes', ... },
+});
+
+// Type-safe: TypeScript ensures all window IDs have components
+const registry = createRegistry(windows.ids, {
   settings: SettingsPanel,
   terminal: TerminalApp,
   notes: NotesApp,
-};
+});
 
 <WindowManagerProvider registry={registry}>
   <Desktop>
@@ -140,6 +325,45 @@ const registry = {
     )}
   </Desktop>
 </WindowManagerProvider>
+```
+
+### Desktop Icons with useIconLauncher
+
+Simplify icon "open or focus" logic:
+
+```tsx
+import { useIconLauncher, DesktopIconGrid } from 'glazier';
+
+function DesktopIcon({ iconId, iconState, ...props }) {
+  const { launchProps, isWindowOpen } = useIconLauncher({ iconId });
+
+  return (
+    <div {...props.dragProps} {...launchProps}>
+      <IconImage active={isWindowOpen} />
+      <span>{iconState.label}</span>
+    </div>
+  );
+}
+```
+
+### URL Routing
+
+Sync window focus with browser URL:
+
+```tsx
+import { createBrowserAdapter } from 'glazier';
+
+const routingAdapter = createBrowserAdapter();
+const pathMap = windows.getPathMap();
+
+<WindowManagerProvider
+  onFocusChange={(windowId) => {
+    if (windowId) {
+      const path = pathMap[windowId];
+      if (path) routingAdapter.navigate(path);
+    }
+  }}
+>
 ```
 
 ## Components
@@ -154,7 +378,7 @@ Root provider that manages all window state.
 | `defaultWindows` | `WindowState[]` | Initial windows to render |
 | `defaultIcons` | `IconState[]` | Initial desktop icons |
 | `registry` | `WindowRegistry` | Component registry for Desktop pattern |
-| `defaultWindowConfigs` | `WindowConfigRegistry` | Default window configs by componentId (for icon launches) |
+| `defaultWindowConfigs` | `WindowConfigRegistry` | Default window configs by componentId |
 | `boundsRef` | `RefObject<HTMLElement>` | Container element for bounds constraints |
 | `initialFocusedWindowId` | `string` | Which window to focus initially |
 | `onFocusChange` | `(windowId: string \| null) => void` | Callback when focus changes |
@@ -170,85 +394,60 @@ Positioning container for a single window.
 | `className` | `string` | Optional CSS class |
 | `style` | `CSSProperties` | Optional inline styles |
 
-### Desktop
+### WindowFrame
 
-Auto-renders windows from the registry based on `componentId`.
+Container for window chrome with built-in drag context.
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `children` | `(props: DesktopRenderProps) => ReactNode` | Render function |
-| `className` | `string` | Optional CSS class |
-| `style` | `CSSProperties` | Optional inline styles |
+| `windowId` | `string` | Window ID |
+| `children` | `ReactNode` | TitleBar, Content, ResizeHandles |
+| `enableDoubleClickMaximize` | `boolean` | Double-click title bar to maximize |
+| `enableSnapToEdges` | `boolean` | Enable edge snapping |
+| `onSnapZoneChange` | `(zone: 'left' \| 'right' \| null) => void` | Snap zone callback |
 
-**DesktopRenderProps:**
-- `Component` - The resolved React component from registry
-- `windowId` - The window's ID
-- `componentProps` - Props to pass to the component
-- `windowState` - Full window state object
+### TitleBar, Title, WindowControls, Content
+
+Composable primitives for window chrome. Use within `WindowFrame`.
+
+```tsx
+<WindowFrame windowId={id}>
+  <TitleBar className="...">
+    <Title />
+    <WindowControls controls={['minimize', 'maximize', 'close']} />
+  </TitleBar>
+  <Content>{children}</Content>
+</WindowFrame>
+```
+
+### ResizeHandles
+
+Pre-built resize handles component.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `windowId` | `string` | Window ID |
+| `minWidth` | `number` | Minimum width (default: 100) |
+| `minHeight` | `number` | Minimum height (default: 50) |
+| `maxWidth` | `number` | Maximum width |
+| `maxHeight` | `number` | Maximum height |
+| `hideWhenMaximized` | `boolean` | Hide when maximized (default: true) |
+
+### Desktop
+
+Auto-renders windows from the registry based on `componentId`.
 
 ### Taskbar
 
 Headless taskbar component with render props.
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `children` | `(props: TaskbarRenderProps) => ReactNode` | Render function |
-
-**TaskbarRenderProps:**
-- `windows` - Array of all window states
-- `activeWindowId` - Currently focused window ID
-- `focusWindow(id)` - Focus a window
-- `minimizeWindow(id)` - Minimize a window
-- `restoreWindow(id)` - Restore a minimized window
-- `closeWindow(id)` - Close a window
-
 ### SnapPreviewOverlay
 
 Visual preview overlay for snap zones during drag.
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `zone` | `"left" \| "right" \| null` | Active snap zone |
-| `style` | `CSSProperties` | Optional inline styles |
-
-### DesktopIcon
-
-Headless component for individual desktop icons with render props pattern.
-
-| Prop | Type | Description |
-|------|------|-------------|
-| `id` | `string` | Icon ID |
-| `children` | `(props: DesktopIconRenderProps) => ReactNode` | Render function |
-| `gridConfig` | `GridConfig` | Optional grid configuration for snapping |
-| `snapOnDrop` | `boolean` | Snap only on drop (default: true) or during drag |
-
-**DesktopIconRenderProps:**
-- `iconId` - Icon ID
-- `iconState` - Full icon state object
-- `isSelected` - Whether icon is selected
-- `isDragging` - Whether icon is being dragged
-- `wasDragged` - Whether icon was moved (use to prevent click after drag)
-- `dragProps` - Props to spread on the icon element
-- `onSelect(multiSelect?)` - Select handler
-- `onLaunch()` - Launch associated window
-
 ### DesktopIconGrid
 
 Container that renders all icons with grid awareness.
-
-| Prop | Type | Description |
-|------|------|-------------|
-| `children` | `(props: DesktopIconGridRenderProps) => ReactNode` | Render function |
-| `grid` | `GridConfig` | Grid configuration (cellWidth, cellHeight, gap) |
-| `snapToGrid` | `boolean` | Enable grid snapping (default: true) |
-| `className` | `string` | Optional CSS class |
-| `style` | `CSSProperties` | Optional inline styles |
-
-**DesktopIconGridRenderProps** extends DesktopIconRenderProps with:
-- `gridPosition` - `{ row, column }` position in grid
-- `pixelPosition` - Current pixel position
-- `isWindowOpen` - Whether associated window is open
-- `openOrFocus()` - Opens window or focuses if already open
 
 ## Hooks
 
@@ -276,109 +475,50 @@ const {
 
 Convenience hook for a single window.
 
+### useWindowFrame()
+
+Access WindowFrame context (for custom window chrome).
+
 ```tsx
 const {
-  id,           // Window ID
-  title,        // Window title
-  displayState, // "normal" | "minimized" | "maximized"
-  isFocused,    // Whether this window is active
-  close,        // () => void
-  minimize,     // () => void
-  maximize,     // () => void
-  restore,      // () => void
-} = useWindow('window-1');
+  title,
+  displayState,
+  isFocused,
+  close,
+  minimize,
+  maximize,
+  restore,
+  dragHandleRef,
+  dragHandleProps,
+  activeSnapZone,
+} = useWindowFrame();
+```
+
+### useIconLauncher(options)
+
+Handles "open or focus existing window" pattern for icons.
+
+```tsx
+const { launch, launchProps, isWindowOpen, existingWindow } = useIconLauncher({
+  iconId: 'icon-1',
+});
 ```
 
 ### useWindowDrag(options)
 
 Window-specific drag behavior with snap support.
 
-```tsx
-const { isDragging, activeSnapZone, dragHandleProps } = useWindowDrag({
-  windowId: 'window-1',
-  dragHandleRef: titleBarRef,
-  disableMaximizedDragRestore: false, // Allow dragging from maximized
-  enableDoubleClickMaximize: true,    // Double-click title bar to maximize
-  enableSnapToEdges: true,            // Snap to left/right edges
-  onSnapZoneEnter: (zone) => {},      // Called when entering snap zone
-  onSnapZoneLeave: () => {},          // Called when leaving snap zone
-});
-
-// Spread dragHandleProps onto your title bar element
-<div ref={titleBarRef} {...dragHandleProps}>Title</div>
-```
-
 ### useResize(size, position, options)
 
 Resize handle behavior.
-
-```tsx
-const { isResizing, resizeHandleProps } = useResize(
-  { width: 400, height: 300 },  // Current size
-  { x: 100, y: 100 },           // Current position
-  {
-    minWidth: 200,
-    minHeight: 150,
-    maxWidth: 800,
-    maxHeight: 600,
-    onResizeStart: () => {},
-    onResize: (size, position) => updateWindow(id, { size, position }),
-    onResizeEnd: (size, position) => {},
-  }
-);
-
-// Create resize handles for any direction
-<div {...resizeHandleProps('se')} /> // Southeast corner
-<div {...resizeHandleProps('e')} />  // East edge
-<div {...resizeHandleProps('n')} />  // North edge
-```
-
-**Resize directions:** `"n"`, `"s"`, `"e"`, `"w"`, `"ne"`, `"nw"`, `"se"`, `"sw"`
-
-### useDrag(options)
-
-Generic drag primitive (used internally by useWindowDrag).
-
-```tsx
-const { isDragging, dragHandleProps } = useDrag({
-  onDragStart: () => {},
-  onDrag: (position, delta) => {},
-  onDragEnd: () => {},
-  getBoundsConstraint: () => ({ container, windowSize, windowPosition }),
-  onConstrainToBounds: (correctedPosition) => {},
-});
-```
 
 ### useDesktopIcon(iconId)
 
 Access and control a single desktop icon.
 
-```tsx
-const {
-  iconState,        // The icon's current state
-  isSelected,       // Whether icon is selected
-  select,           // (multiSelect?: boolean) => void
-  deselect,         // () => void
-  toggleSelect,     // () => void
-  launch,           // () => void - opens associated window
-  updatePosition,   // (position: Position) => void
-} = useDesktopIcon('icon-1');
-```
-
 ### useIconDrag(options)
 
 Drag behavior for desktop icons with optional grid snapping.
-
-```tsx
-const { isDragging, wasDragged, dragHandleProps } = useIconDrag({
-  iconId: 'icon-1',
-  gridConfig: { cellWidth: 80, cellHeight: 90, gap: 10 },
-  snapOnDrop: true,  // Snap only when released (default)
-  onDragStart: (position) => {},
-  onDrag: (position) => {},
-  onDragEnd: (position) => {},
-});
-```
 
 ## Types
 
@@ -387,7 +527,7 @@ interface WindowState {
   id: string;
   title: string;
   position: { x: number; y: number };
-  size: { width: number; height: number };
+  size: { width: number | string; height: number | string };
   zIndex: number;
   displayState: 'normal' | 'minimized' | 'maximized';
   previousBounds?: { position: Position; size: Size };
@@ -409,10 +549,10 @@ type SnapZone = 'left' | 'right';
 interface IconState {
   id: string;
   label: string;
-  componentId: string;        // References WindowRegistry
+  componentId: string;
   componentProps?: Record<string, unknown>;
   position: Position;
-  icon?: string;              // Consumer-defined icon identifier
+  icon?: string;
 }
 
 interface GridConfig {
@@ -420,106 +560,31 @@ interface GridConfig {
   cellHeight: number;
   gap?: number;
 }
+
+// defineWindows configuration
+interface WindowDefinition {
+  title: string;
+  defaultPosition: Position;
+  defaultSize: Size;
+  path?: string;
+  icon?: {
+    label?: string;
+    iconKey?: string;
+    position: Position;
+  };
+  defaultProps?: Record<string, unknown>;
+}
 ```
 
 ## Examples
 
-### Basic Window with Title Bar
+See [`apps/examples/next`](./apps/examples/next) and [`apps/examples/astro`](./apps/examples/astro) for complete implementations demonstrating:
 
-```tsx
-function BasicWindow({ windowId }: { windowId: string }) {
-  const { state, closeWindow } = useWindowManager();
-  const win = state.windows.find((w) => w.id === windowId);
-  const titleBarRef = useRef<HTMLDivElement>(null);
-
-  const { dragHandleProps } = useWindowDrag({
-    windowId,
-    dragHandleRef: titleBarRef,
-  });
-
-  if (!win) return null;
-
-  return (
-    <Window id={windowId} style={{ background: 'white', border: '1px solid #ccc' }}>
-      <div ref={titleBarRef} {...dragHandleProps} style={{ padding: 8, background: '#333', color: 'white' }}>
-        {win.title}
-        <button onClick={() => closeWindow(windowId)}>×</button>
-      </div>
-      <div style={{ padding: 16 }}>Content</div>
-    </Window>
-  );
-}
-```
-
-### Taskbar Implementation
-
-```tsx
-function MyTaskbar() {
-  return (
-    <Taskbar>
-      {({ windows, activeWindowId, focusWindow, minimizeWindow, restoreWindow }) => (
-        <div style={{ display: 'flex', gap: 4, padding: 8, background: '#222' }}>
-          {windows.map((w) => (
-            <button
-              key={w.id}
-              onClick={() => {
-                if (w.displayState === 'minimized') restoreWindow(w.id);
-                else if (w.id === activeWindowId) minimizeWindow(w.id);
-                else focusWindow(w.id);
-              }}
-              style={{ opacity: w.displayState === 'minimized' ? 0.6 : 1 }}
-            >
-              {w.title}
-            </button>
-          ))}
-        </div>
-      )}
-    </Taskbar>
-  );
-}
-```
-
-### Snap Preview with Visual Feedback
-
-```tsx
-function DesktopWithSnap() {
-  const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
-
-  return (
-    <>
-      <MyWindow
-        onSnapZoneEnter={setSnapZone}
-        onSnapZoneLeave={() => setSnapZone(null)}
-      />
-      <SnapPreviewOverlay zone={snapZone} />
-    </>
-  );
-}
-```
-
-### Desktop Icons
-
-```tsx
-<DesktopIconGrid grid={{ cellWidth: 80, cellHeight: 90, gap: 10 }}>
-  {({ iconState, isSelected, dragProps, onSelect, openOrFocus, wasDragged }) => (
-    <div
-      {...dragProps}
-      onClick={() => !wasDragged && onSelect()}
-      onDoubleClick={openOrFocus}
-      style={{
-        position: 'absolute',
-        left: iconState.position.x,
-        top: iconState.position.y,
-        background: isSelected ? '#0066cc33' : 'transparent',
-      }}
-    >
-      {iconState.label}
-    </div>
-  )}
-</DesktopIconGrid>
-```
-
-See [`examples/next-example`](./examples/next-example) for a complete implementation with icons, windows, and taskbar.
+- `defineWindows` unified configuration
+- `WindowFrame` composables
+- `useIconLauncher` for desktop icons
+- `createBrowserAdapter` for URL routing
+- Type-safe registries with `createRegistry`
 
 ## Requirements
 

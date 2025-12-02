@@ -5,86 +5,137 @@ description: Adding desktop icons with drag and grid snapping
 
 Glazier supports desktop icons that can be dragged, selected, and used to launch windows.
 
-## Basic Icon Setup
+## Setup with defineWindows
 
-First, define your icons in the provider:
+The recommended approach is to define icons alongside windows using `defineWindows`:
 
 ```tsx
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  settings: {
+    title: 'Settings',
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 350, height: 400 },
+    path: '/settings',
+    icon: {
+      label: 'Settings',
+      iconKey: 'settings',
+      position: { x: 20, y: 20 },
+    },
+  },
+  terminal: {
+    title: 'Terminal',
+    defaultPosition: { x: 150, y: 150 },
+    defaultSize: { width: 600, height: 400 },
+    path: '/terminal',
+    icon: {
+      label: 'Terminal',
+      iconKey: 'terminal',
+      position: { x: 20, y: 120 },
+    },
+    defaultProps: { initialPath: '/home/user' },
+  },
+});
+
+// Use in provider
 <WindowManagerProvider
-	boundsRef={containerRef}
-	registry={appRegistry}
-	defaultIcons={[
-		{
-			id: "settings-icon",
-			label: "Settings",
-			componentId: "settings",
-			position: { x: 0, y: 0 },
-			icon: "settings",
-		},
-		{
-			id: "terminal-icon",
-			label: "Terminal",
-			componentId: "terminal",
-			componentProps: { initialPath: "/home/user" },
-			position: { x: 88, y: 0 },
-			icon: "terminal",
-		},
-	]}
+  registry={registry}
+  defaultIcons={windows.getIconConfigs()}
 >
-	{/* ... */}
-</WindowManagerProvider>
 ```
+
+## Using useIconLauncher Hook
+
+The `useIconLauncher` hook simplifies the "open or focus" pattern:
+
+```tsx
+import { DesktopIconGrid, useIconLauncher } from 'glazier';
+
+function DesktopIcon({ iconId, iconState, dragProps, wasDragged, onSelect }) {
+  const { launchProps, isWindowOpen } = useIconLauncher({ iconId });
+
+  return (
+    <div
+      {...dragProps}
+      {...launchProps}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!wasDragged) onSelect();
+      }}
+      className={isWindowOpen ? 'icon-active' : ''}
+    >
+      <IconImage icon={iconState.icon} active={isWindowOpen} />
+      <span>{iconState.label}</span>
+    </div>
+  );
+}
+
+// Usage in DesktopIconGrid
+<DesktopIconGrid grid={{ cellWidth: 80, cellHeight: 90, gap: 10 }}>
+  {(props) => (
+    <DesktopIcon
+      iconId={props.iconState.id}
+      {...props}
+    />
+  )}
+</DesktopIconGrid>
+```
+
+The hook provides:
+- `launchProps` - Contains `onDoubleClick` handler that opens/focuses window
+- `isWindowOpen` - Boolean for styling active icons
+- `existingWindow` - The window state if already open
+- `launch()` - Imperative function to trigger open/focus
 
 ## Using DesktopIconGrid
 
 The `DesktopIconGrid` component renders all icons with grid awareness:
 
 ```tsx
-import { DesktopIconGrid } from "glazier";
+import { DesktopIconGrid } from 'glazier';
 
 function Desktop() {
-	const gridConfig = {
-		cellWidth: 80,
-		cellHeight: 90,
-		gap: 8,
-	};
+  const gridConfig = {
+    cellWidth: 80,
+    cellHeight: 90,
+    gap: 8,
+  };
 
-	return (
-		<DesktopIconGrid grid={gridConfig} snapToGrid={true}>
-			{({
-				iconState,
-				pixelPosition,
-				isSelected,
-				isDragging,
-				wasDragged,
-				dragProps,
-				onLaunch,
-			}) => (
-				<div
-					{...dragProps}
-					onClick={(e) => {
-						e.stopPropagation();
-						if (!wasDragged) {
-							onLaunch();
-						}
-					}}
-					style={{
-						position: "absolute",
-						left: pixelPosition.x,
-						top: pixelPosition.y,
-						cursor: isDragging ? "grabbing" : "pointer",
-					}}
-				>
-					<IconDisplay
-						label={iconState.label}
-						icon={iconState.icon}
-						isSelected={isSelected}
-						isDragging={isDragging}
-					/>
-				</div>
-			)}
-		</DesktopIconGrid>
-	);
+  return (
+    <DesktopIconGrid grid={gridConfig} snapToGrid={true}>
+      {({
+        iconState,
+        pixelPosition,
+        isSelected,
+        isDragging,
+        wasDragged,
+        dragProps,
+        openOrFocus,
+      }) => (
+        <div
+          {...dragProps}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!wasDragged) openOrFocus();
+          }}
+          style={{
+            position: 'absolute',
+            left: pixelPosition.x,
+            top: pixelPosition.y,
+            cursor: isDragging ? 'grabbing' : 'pointer',
+          }}
+        >
+          <IconDisplay
+            label={iconState.label}
+            icon={iconState.icon}
+            isSelected={isSelected}
+            isDragging={isDragging}
+          />
+        </div>
+      )}
+    </DesktopIconGrid>
+  );
 }
 ```
 
@@ -94,12 +145,12 @@ Each icon has the following state:
 
 ```tsx
 interface IconState {
-	id: string;
-	label: string;
-	componentId: string; // References WindowRegistry
-	componentProps?: Record<string, unknown>;
-	position: Position;
-	icon?: string; // Consumer-defined icon identifier
+  id: string;
+  label: string;
+  componentId: string;        // References WindowRegistry
+  componentProps?: Record<string, unknown>;
+  position: Position;
+  icon?: string;              // Consumer-defined icon identifier
 }
 ```
 
@@ -107,9 +158,9 @@ interface IconState {
 
 ```tsx
 interface GridConfig {
-	cellWidth: number; // Width of each grid cell
-	cellHeight: number; // Height of each grid cell
-	gap?: number; // Gap between cells (default: 0)
+  cellWidth: number;   // Width of each grid cell
+  cellHeight: number;  // Height of each grid cell
+  gap?: number;        // Gap between cells (default: 0)
 }
 ```
 
@@ -118,32 +169,32 @@ interface GridConfig {
 For icons that can be placed anywhere without grid snapping, use `DesktopIcon` directly:
 
 ```tsx
-import { DesktopIcon, useWindowManager } from "glazier";
+import { DesktopIcon, useWindowManager } from 'glazier';
 
 function FreePositionIcons() {
-	const { icons } = useWindowManager();
+  const { icons } = useWindowManager();
 
-	return (
-		<>
-			{icons.map((icon) => (
-				<DesktopIcon key={icon.id} id={icon.id}>
-					{({ iconState, dragProps, onLaunch, wasDragged }) => (
-						<div
-							{...dragProps}
-							onClick={() => !wasDragged && onLaunch()}
-							style={{
-								position: "absolute",
-								left: iconState.position.x,
-								top: iconState.position.y,
-							}}
-						>
-							{iconState.label}
-						</div>
-					)}
-				</DesktopIcon>
-			))}
-		</>
-	);
+  return (
+    <>
+      {icons.map((icon) => (
+        <DesktopIcon key={icon.id} id={icon.id}>
+          {({ iconState, dragProps, onLaunch, wasDragged }) => (
+            <div
+              {...dragProps}
+              onClick={() => !wasDragged && onLaunch()}
+              style={{
+                position: 'absolute',
+                left: iconState.position.x,
+                top: iconState.position.y,
+              }}
+            >
+              {iconState.label}
+            </div>
+          )}
+        </DesktopIcon>
+      ))}
+    </>
+  );
 }
 ```
 
@@ -151,44 +202,116 @@ function FreePositionIcons() {
 
 ### DesktopIconGrid Render Props
 
-| Prop            | Type                     | Description                          |
-| --------------- | ------------------------ | ------------------------------------ |
-| `iconState`     | `IconState`              | The icon's current state             |
-| `pixelPosition` | `Position`               | Current pixel position               |
-| `gridPosition`  | `{ row, column }`        | Position in grid                     |
-| `isSelected`    | `boolean`                | Whether icon is selected             |
-| `isDragging`    | `boolean`                | Whether icon is being dragged        |
-| `wasDragged`    | `boolean`                | Whether icon was moved during drag   |
-| `dragProps`     | `object`                 | Props to spread on the icon element  |
-| `onSelect`      | `(multiSelect?) => void` | Select the icon                      |
-| `onLaunch`      | `() => void`             | Launch associated window             |
-| `isWindowOpen`  | `boolean`                | Whether associated window is open    |
-| `openOrFocus`   | `() => void`             | Opens window or focuses if open      |
+| Prop            | Type                     | Description                        |
+| --------------- | ------------------------ | ---------------------------------- |
+| `iconState`     | `IconState`              | The icon's current state           |
+| `pixelPosition` | `Position`               | Current pixel position             |
+| `gridPosition`  | `{ row, column }`        | Position in grid                   |
+| `isSelected`    | `boolean`                | Whether icon is selected           |
+| `isDragging`    | `boolean`                | Whether icon is being dragged      |
+| `wasDragged`    | `boolean`                | Whether icon was moved during drag |
+| `dragProps`     | `object`                 | Props to spread on the icon element |
+| `onSelect`      | `(multiSelect?) => void` | Select the icon                    |
+| `onLaunch`      | `() => void`             | Launch associated window           |
+| `isWindowOpen`  | `boolean`                | Whether associated window is open  |
+| `openOrFocus`   | `() => void`             | Opens window or focuses if open    |
 
-## Launching Windows from Icons
+## Visual Feedback for Active Icons
 
-Icons launch windows based on their `componentId` and `componentProps`:
+Use `isWindowOpen` from `useIconLauncher` or render props to style active icons:
 
 ```tsx
-// When icon is launched, it opens a window like this:
-openWindow({
-	id: `${componentId}-${Date.now()}`,
-	title: icon.label,
-	componentId: icon.componentId,
-	componentProps: icon.componentProps,
-	position: { x: 100, y: 100 },
-	size: { width: 400, height: 300 },
-});
+function DesktopIcon({ iconId, iconState, ...props }) {
+  const { launchProps, isWindowOpen } = useIconLauncher({ iconId });
+
+  return (
+    <div {...props.dragProps} {...launchProps}>
+      <div className={`icon-image ${isWindowOpen ? 'bg-slate-600' : 'bg-slate-700'}`}>
+        <svg className={isWindowOpen ? 'text-blue-300' : 'text-blue-400'}>
+          {/* icon */}
+        </svg>
+      </div>
+      <span>{iconState.label}</span>
+    </div>
+  );
+}
 ```
 
-Use `defaultWindowConfigs` to customize window sizes per component:
+## Complete Example
 
 ```tsx
-<WindowManagerProvider
-	registry={appRegistry}
-	defaultWindowConfigs={{
-		settings: { width: 400, height: 500 },
-		terminal: { width: 600, height: 400 },
-	}}
->
+import {
+  WindowManagerProvider,
+  DesktopIconGrid,
+  useIconLauncher,
+  createRegistry,
+} from 'glazier';
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  home: {
+    title: 'Home',
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: '/',
+    icon: { label: 'Home', iconKey: 'home', position: { x: 20, y: 20 } },
+  },
+  settings: {
+    title: 'Settings',
+    defaultPosition: { x: 150, y: 150 },
+    defaultSize: { width: 350, height: 400 },
+    path: '/settings',
+    icon: { label: 'Settings', iconKey: 'settings', position: { x: 20, y: 120 } },
+  },
+});
+
+const registry = createRegistry(windows.ids, {
+  home: HomeWindow,
+  settings: SettingsWindow,
+});
+
+function App() {
+  return (
+    <WindowManagerProvider
+      registry={registry}
+      defaultWindows={[windows.getWindowState('home')]}
+      defaultIcons={windows.getIconConfigs()}
+    >
+      <DesktopIconGrid grid={{ cellWidth: 80, cellHeight: 90, gap: 10 }}>
+        {(props) => <DesktopIcon {...props} />}
+      </DesktopIconGrid>
+      {/* ... rest of app */}
+    </WindowManagerProvider>
+  );
+}
+
+function DesktopIcon({ iconState, isSelected, isDragging, wasDragged, dragProps, onSelect }) {
+  const { launchProps, isWindowOpen } = useIconLauncher({ iconId: iconState.id });
+
+  return (
+    <div
+      {...dragProps}
+      {...launchProps}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!wasDragged) onSelect();
+      }}
+      style={{
+        position: 'absolute',
+        left: iconState.position.x,
+        top: iconState.position.y,
+        cursor: isDragging ? 'grabbing' : 'pointer',
+        opacity: isDragging ? 0.7 : 1,
+      }}
+      className={`flex flex-col items-center p-2 rounded ${
+        isSelected ? 'bg-blue-500/30 ring-1 ring-blue-400' : 'hover:bg-white/10'
+      }`}
+    >
+      <div className={`p-2 rounded ${isWindowOpen ? 'bg-slate-600' : 'bg-slate-700'}`}>
+        <IconSvg icon={iconState.icon} active={isWindowOpen} />
+      </div>
+      <span className="text-xs text-white truncate">{iconState.label}</span>
+    </div>
+  );
+}
 ```

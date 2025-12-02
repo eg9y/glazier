@@ -1,18 +1,20 @@
 "use client";
 
 import {
+	createBrowserAdapter,
+	createRegistry,
 	Desktop,
 	DesktopIconGrid,
 	SnapPreviewOverlay,
 	Taskbar,
+	useIconLauncher,
+	useWindowManager,
+	useWindowRouting,
 	Window,
 	WindowManagerProvider,
-	type WindowRegistry,
-	type WindowState,
-	useWindowManager,
 } from "glazier";
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	AboutContent,
 	ContactContent,
@@ -21,19 +23,23 @@ import {
 	NextFrameworkDescription,
 	NextFrameworkInfo,
 } from "./content";
-import { iconConfigs, pathMap, windowConfigs } from "../lib/windowConfigs";
+import { windows, type WindowComponentId } from "../lib/windowConfigs";
 import { AboutWindow } from "./windows/AboutWindow";
 import { ContactWindow } from "./windows/ContactWindow";
 import { HomeWindow } from "./windows/HomeWindow";
 
 /**
- * Component registry for Glazier windows.
+ * Type-safe component registry using createRegistry.
  */
-const registry: WindowRegistry = {
+const registry = createRegistry(windows.ids, {
 	home: HomeWindow,
 	about: AboutWindow,
 	contact: ContactWindow,
-};
+});
+
+// Pre-compute path maps for routing
+const pathMap = windows.getPathMap();
+const routingAdapter = createBrowserAdapter();
 
 interface DesktopShellProps {
 	initialWindowId: string;
@@ -41,34 +47,27 @@ interface DesktopShellProps {
 
 /**
  * Client-side desktop shell that wraps Glazier components.
- * URL routing is handled via onFocusChange callback.
+ * Uses createBrowserAdapter for URL synchronization.
  */
 export function DesktopShell({ initialWindowId }: DesktopShellProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// Initialize with the window matching the URL
-	const [initialWindows] = useState<WindowState[]>(() => [
-		windowConfigs[initialWindowId] ?? windowConfigs.home,
-	]);
+	const initialWindows = [
+		windows.has(initialWindowId)
+			? windows.getWindowState(initialWindowId as WindowComponentId)
+			: windows.getWindowState("home"),
+	];
 
 	return (
 		<WindowManagerProvider
 			defaultWindows={initialWindows}
-			defaultIcons={iconConfigs}
+			defaultIcons={windows.getIconConfigs()}
 			initialFocusedWindowId={initialWindowId}
 			registry={registry}
 			boundsRef={containerRef}
-			onFocusChange={(windowId) => {
-				// Sync URL with focused window
-				if (windowId && typeof window !== "undefined") {
-					const path = pathMap[windowId] || `/${windowId}`;
-					if (window.location.pathname !== path) {
-						window.history.replaceState(null, "", path);
-					}
-				}
-			}}
 		>
-			<DesktopContent containerRef={containerRef} />
+			<DesktopContentWithRouting containerRef={containerRef} />
 		</WindowManagerProvider>
 	);
 }
@@ -78,11 +77,32 @@ interface DesktopContentProps {
 }
 
 /**
+ * Wrapper component that sets up routing and renders desktop content.
+ * Uses useWindowRouting to sync window focus with URL.
+ */
+function DesktopContentWithRouting({ containerRef }: DesktopContentProps) {
+	const { onFocusChange } = useWindowRouting({
+		pathMap,
+		pathToIdMap: windows.getPathToIdMap(),
+		adapter: routingAdapter,
+		useComponentId: true,
+	});
+
+	const { state } = useWindowManager();
+
+	// Sync URL when active window changes
+	useEffect(() => {
+		onFocusChange(state.activeWindowId);
+	}, [state.activeWindowId, onFocusChange]);
+
+	return <DesktopContent containerRef={containerRef} />;
+}
+
+/**
  * Inner desktop content that can use the WindowManager context.
  */
 function DesktopContent({ containerRef }: DesktopContentProps) {
-	const { openWindow, focusWindow, state, deselectAllIcons } =
-		useWindowManager();
+	const { deselectAllIcons } = useWindowManager();
 	const [snapPreview, setSnapPreview] = useState<"left" | "right" | null>(null);
 
 	return (
@@ -91,7 +111,7 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 			className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900"
 			onClick={() => deselectAllIcons()}
 		>
-			{/* Desktop Icons */}
+			{/* Desktop Icons - now using useIconLauncher */}
 			<DesktopIconGrid
 				grid={{ cellWidth: 80, cellHeight: 90, gap: 10 }}
 				className="pointer-events-none absolute inset-0 p-4"
@@ -103,59 +123,17 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 					wasDragged,
 					dragProps,
 					onSelect,
-					onLaunch,
-				}) => {
-					const isWindowOpen = state.windows.some(
-						(w) => w.componentId === iconState.componentId,
-					);
-
-					return (
-						<div
-							{...dragProps}
-							onClick={(e) => {
-								e.stopPropagation();
-								if (!wasDragged) {
-									onSelect();
-								}
-							}}
-							onDoubleClick={(e) => {
-								e.stopPropagation();
-								if (isWindowOpen) {
-									// Focus existing window
-									const win = state.windows.find(
-										(w) => w.componentId === iconState.componentId,
-									);
-									if (win) {
-										focusWindow(win.id);
-									}
-								} else {
-									// Open new window using the componentId to get config
-									const config = windowConfigs[iconState.componentId];
-									if (config) {
-										openWindow(config);
-									}
-								}
-							}}
-							style={{
-								position: "absolute",
-								left: iconState.position.x,
-								top: iconState.position.y,
-								width: 80,
-								cursor: isDragging ? "grabbing" : "pointer",
-								opacity: isDragging ? 0.7 : 1,
-							}}
-							className={`pointer-events-auto flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${isSelected
-								? "bg-blue-500/30 ring-1 ring-blue-400"
-								: "hover:bg-white/10"
-								}`}
-						>
-							<DesktopIconImage icon={iconState.icon} />
-							<span className="w-full truncate text-center text-white text-xs">
-								{iconState.label}
-							</span>
-						</div>
-					);
-				}}
+				}) => (
+					<DesktopIconComponent
+						iconId={iconState.id}
+						iconState={iconState}
+						isSelected={isSelected}
+						isDragging={isDragging}
+						wasDragged={wasDragged}
+						dragProps={dragProps}
+						onSelect={onSelect}
+					/>
+				)}
 			</DesktopIconGrid>
 
 			{/* Snap preview overlay */}
@@ -227,10 +205,11 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 										taskbarFocusWindow(win.id);
 									}
 								}}
-								className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm transition-colors ${win.id === activeWindowId
-									? "bg-white/20 text-white"
-									: "text-slate-400 hover:bg-white/10 hover:text-white"
-									}`}
+								className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm transition-colors ${
+									win.id === activeWindowId
+										? "bg-white/20 text-white"
+										: "text-slate-400 hover:bg-white/10 hover:text-white"
+								}`}
 							>
 								<span>{win.title}</span>
 								{win.displayState === "minimized" && (
@@ -246,13 +225,70 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 }
 
 /**
+ * Desktop icon component using useIconLauncher hook.
+ */
+interface DesktopIconComponentProps {
+	iconId: string;
+	iconState: { id: string; label: string; icon?: string; position: { x: number; y: number }; componentId: string };
+	isSelected: boolean;
+	isDragging: boolean;
+	wasDragged: boolean;
+	dragProps: Record<string, unknown>;
+	onSelect: () => void;
+}
+
+function DesktopIconComponent({
+	iconId,
+	iconState,
+	isSelected,
+	isDragging,
+	wasDragged,
+	dragProps,
+	onSelect,
+}: DesktopIconComponentProps) {
+	// Use the new useIconLauncher hook for open-or-focus logic
+	const { launchProps, isWindowOpen } = useIconLauncher({ iconId });
+
+	return (
+		<div
+			{...(dragProps as React.HTMLAttributes<HTMLDivElement>)}
+			{...launchProps}
+			onClick={(e) => {
+				e.stopPropagation();
+				if (!wasDragged) {
+					onSelect();
+				}
+			}}
+			style={{
+				position: "absolute",
+				left: iconState.position.x,
+				top: iconState.position.y,
+				width: 80,
+				cursor: isDragging ? "grabbing" : "pointer",
+				opacity: isDragging ? 0.7 : 1,
+			}}
+			className={`pointer-events-auto flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+				isSelected
+					? "bg-blue-500/30 ring-1 ring-blue-400"
+					: "hover:bg-white/10"
+			}`}
+		>
+			<DesktopIconImage icon={iconState.icon} isActive={isWindowOpen} />
+			<span className="w-full truncate text-center text-white text-xs">
+				{iconState.label}
+			</span>
+		</div>
+	);
+}
+
+/**
  * Simple icon component for desktop icons.
  */
-function DesktopIconImage({ icon }: { icon?: string }) {
+function DesktopIconImage({ icon, isActive }: { icon?: string; isActive?: boolean }) {
 	const iconMap: Record<string, React.ReactNode> = {
 		home: (
 			<svg
-				className="h-10 w-10 text-blue-400"
+				className={`h-10 w-10 ${isActive ? "text-blue-300" : "text-blue-400"}`}
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -267,7 +303,7 @@ function DesktopIconImage({ icon }: { icon?: string }) {
 		),
 		about: (
 			<svg
-				className="h-10 w-10 text-green-400"
+				className={`h-10 w-10 ${isActive ? "text-green-300" : "text-green-400"}`}
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -282,7 +318,7 @@ function DesktopIconImage({ icon }: { icon?: string }) {
 		),
 		contact: (
 			<svg
-				className="h-10 w-10 text-purple-400"
+				className={`h-10 w-10 ${isActive ? "text-purple-300" : "text-purple-400"}`}
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -298,7 +334,7 @@ function DesktopIconImage({ icon }: { icon?: string }) {
 	};
 
 	return (
-		<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/50">
+		<div className={`flex h-12 w-12 items-center justify-center rounded-lg ${isActive ? "bg-slate-600/50" : "bg-slate-700/50"}`}>
 			{icon && iconMap[icon] ? (
 				iconMap[icon]
 			) : (

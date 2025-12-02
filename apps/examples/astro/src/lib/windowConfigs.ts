@@ -1,85 +1,67 @@
-import type { IconState, WindowState } from "glazier";
+import { defineWindows } from "glazier/server";
 
 /**
- * Window configurations for the desktop.
- * Each key maps to a route (e.g., "home" → "/", "about" → "/about").
+ * Unified window definitions using defineWindows.
+ * Single source of truth for window configs, icon configs, and routing paths.
  */
-export const windowConfigs: Record<string, WindowState> = {
+export const windows = defineWindows({
 	home: {
-		id: "home",
 		title: "Home",
-		componentId: "home",
-		position: { x: 150, y: 80 },
-		size: { width: "90vw", height: 400 },
-		zIndex: 1,
-		displayState: "normal",
+		defaultPosition: { x: 150, y: 80 },
+		defaultSize: { width: "90vw", height: 400 },
+		path: "/",
+		icon: {
+			label: "Home",
+			iconKey: "home",
+			position: { x: 20, y: 20 },
+		},
 	},
 	about: {
-		id: "about",
 		title: "About",
-		componentId: "about",
-		position: { x: 200, y: 120 },
-		size: { width: 480, height: 380 },
-		zIndex: 1,
-		displayState: "normal",
+		defaultPosition: { x: 200, y: 120 },
+		defaultSize: { width: 480, height: 380 },
+		path: "/about",
+		icon: {
+			label: "About",
+			iconKey: "about",
+			position: { x: 20, y: 120 },
+		},
 	},
 	contact: {
-		id: "contact",
 		title: "Contact",
-		componentId: "contact",
-		position: { x: 250, y: 160 },
-		size: { width: 450, height: 350 },
-		zIndex: 1,
-		displayState: "normal",
+		defaultPosition: { x: 250, y: 160 },
+		defaultSize: { width: 450, height: 350 },
+		path: "/contact",
+		icon: {
+			label: "Contact",
+			iconKey: "contact",
+			position: { x: 20, y: 220 },
+		},
 	},
-};
+});
 
-/**
- * Desktop icon configurations.
- * Icons can be double-clicked to open their associated windows.
- */
-export const iconConfigs: IconState[] = [
-	{
-		id: "icon-home",
-		label: "Home",
-		componentId: "home",
-		position: { x: 20, y: 20 },
-		icon: "home",
-	},
-	{
-		id: "icon-about",
-		label: "About",
-		componentId: "about",
-		position: { x: 20, y: 120 },
-		icon: "about",
-	},
-	{
-		id: "icon-contact",
-		label: "Contact",
-		componentId: "contact",
-		position: { x: 20, y: 220 },
-		icon: "contact",
-	},
-];
+// Export type for component IDs
+export type WindowComponentId = (typeof windows.ids)[number];
 
 /**
  * Valid route slugs for static generation.
  */
-export const validSlugs = Object.keys(windowConfigs);
+export const validSlugs = windows.getValidSlugs();
 
-/**
- * Path map for URL routing.
- * Used by onFocusChange callback to sync URL with focused window.
- */
-export const pathMap: Record<string, string> = {
-	home: "/",
-	about: "/about",
-	contact: "/contact",
-};
+// Legacy exports for backwards compatibility during migration
+// These can be removed once fully migrated to defineWindows
+export const windowConfigs = Object.fromEntries(
+	windows.ids.map((id) => [id, windows.getWindowState(id)]),
+);
+export const iconConfigs = windows.getIconConfigs();
+export const pathMap = windows.getPathMap();
 
 /**
  * Get window config by slug, with fallback to home.
  */
-export function getWindowConfig(slug: string): WindowState {
-	return windowConfigs[slug] ?? windowConfigs.home;
+export function getWindowConfig(slug: string) {
+	if (windows.has(slug)) {
+		return windows.getWindowState(slug as WindowComponentId);
+	}
+	return windows.getWindowState("home");
 }

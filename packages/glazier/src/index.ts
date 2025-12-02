@@ -16,8 +16,11 @@ export type {
 	GridConfig,
 	// Provider props
 	WindowManagerProviderProps,
+	// Type-safe registry types
+	WindowComponentBaseProps,
+	TypedWindowRegistry,
 } from "./types";
-export { isRegistryWindowState } from "./types";
+export { isRegistryWindowState, createRegistry } from "./types";
 
 // Context
 export { WindowManagerContext } from "./context/WindowManagerContext";
@@ -43,6 +46,30 @@ export type {
 	DesktopIconGridProps,
 	DesktopIconGridRenderProps,
 } from "./components/DesktopIconGrid";
+
+// WindowFrame components
+export {
+	WindowFrame,
+	TitleBar,
+	Title,
+	WindowControls,
+	Content,
+	WindowFrameContext,
+	useWindowFrame,
+} from "./components/WindowFrame";
+export type {
+	WindowFrameProps,
+	TitleBarProps,
+	TitleProps,
+	WindowControlsProps,
+	WindowControlType,
+	ContentProps,
+	WindowFrameContextValue,
+} from "./components/WindowFrame";
+
+// ResizeHandles component
+export { ResizeHandles } from "./components/ResizeHandles";
+export type { ResizeHandlesProps } from "./components/ResizeHandles";
 
 // Hooks
 export { useWindowManager } from "./hooks/useWindowManager";
@@ -70,6 +97,16 @@ export type {
 	UseIconDragOptions,
 	UseIconDragReturn,
 } from "./hooks/useIconDrag";
+export { useIconLauncher } from "./hooks/useIconLauncher";
+export type {
+	UseIconLauncherOptions,
+	UseIconLauncherReturn,
+} from "./hooks/useIconLauncher";
+export { useWindowRouting } from "./hooks/useWindowRouting";
+export type {
+	UseWindowRoutingOptions,
+	UseWindowRoutingReturn,
+} from "./hooks/useWindowRouting";
 
 // Utils
 export { generateWindowId } from "./utils/id";
@@ -83,3 +120,16 @@ export {
 	resolveSizeValueToPixels,
 	createPixelSize,
 } from "./utils/sizeUtils";
+export {
+	getResizeHandleStyle,
+	ALL_RESIZE_DIRECTIONS,
+	RESIZE_CURSORS,
+} from "./utils/resizeHandleStyles";
+
+// Config
+export { defineWindows } from "./config";
+export type { WindowDefinition, WindowDefinitions } from "./config";
+
+// Routing
+export type { RoutingAdapter } from "./routing";
+export { createBrowserAdapter } from "./routing";

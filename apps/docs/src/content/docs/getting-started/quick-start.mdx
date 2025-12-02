@@ -3,96 +3,200 @@ title: Quick Start
 description: Create your first draggable, resizable window
 ---
 
-This guide will walk you through creating a basic window with drag and resize functionality.
+This guide walks you through creating windows with Glazier. We'll show both the recommended approach using `WindowFrame` composables and the manual approach for full control.
 
-## Basic Setup
+## Option 1: Using WindowFrame Composables (Recommended)
 
-First, wrap your app with `WindowManagerProvider`:
+The `WindowFrame` system dramatically reduces boilerplate while still giving you full styling control.
+
+### Setup
+
+First, wrap your app with `WindowManagerProvider` and define your windows:
+
+```tsx
+import { useRef } from "react";
+import {
+  WindowManagerProvider,
+  Window,
+  Desktop,
+  createRegistry,
+} from "glazier";
+import { defineWindows } from "glazier/server";
+
+// Define all windows in one place
+const windows = defineWindows({
+  home: {
+    title: "My Window",
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: "/",
+  },
+});
+
+// Type-safe component registry
+const registry = createRegistry(windows.ids, {
+  home: MyWindow,
+});
+
+function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <WindowManagerProvider
+      boundsRef={containerRef}
+      registry={registry}
+      defaultWindows={[windows.getWindowState("home")]}
+    >
+      <div ref={containerRef} style={{ position: "relative", height: "100vh" }}>
+        <Desktop>
+          {({ windowId, component: Component }) => (
+            <Window id={windowId} className="bg-white rounded-lg shadow-xl">
+              <Component windowId={windowId} />
+            </Window>
+          )}
+        </Desktop>
+      </div>
+    </WindowManagerProvider>
+  );
+}
+```
+
+### Create a Window Component
+
+Use `WindowFrame` composables for minimal boilerplate:
+
+```tsx
+import {
+  WindowFrame,
+  TitleBar,
+  Title,
+  WindowControls,
+  Content,
+  ResizeHandles,
+} from "glazier";
+
+function MyWindow({ windowId }: { windowId: string }) {
+  return (
+    <WindowFrame
+      windowId={windowId}
+      enableDoubleClickMaximize
+      enableSnapToEdges
+    >
+      {/* Title bar with drag support */}
+      <TitleBar className="flex h-10 items-center justify-between bg-slate-900 px-3">
+        <Title className="text-white font-medium" />
+        <WindowControls
+          className="flex gap-1"
+          buttonClassName="p-1 rounded hover:bg-slate-700 text-slate-400"
+          closeButtonClassName="hover:bg-red-600 hover:text-white"
+        />
+      </TitleBar>
+
+      {/* Content area */}
+      <Content className="p-4 overflow-auto">
+        <h1>Hello from Glazier!</h1>
+        <p>This window is draggable and resizable.</p>
+      </Content>
+
+      {/* Resize handles */}
+      <ResizeHandles windowId={windowId} minWidth={300} minHeight={200} />
+    </WindowFrame>
+  );
+}
+```
+
+That's it! You now have a fully functional window with:
+- Draggable title bar
+- Double-click to maximize
+- Snap-to-edges support
+- Minimize, maximize, close controls
+- Resize handles on all 8 edges
+
+## Option 2: Manual Control (Full Flexibility)
+
+For complete control over every aspect, use the lower-level hooks:
+
+### Basic Setup
 
 ```tsx
 import { useRef } from "react";
 import { WindowManagerProvider } from "glazier";
 
 function App() {
-	const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-	return (
-		<WindowManagerProvider
-			boundsRef={containerRef}
-			defaultWindows={[
-				{
-					id: "window-1",
-					title: "My Window",
-					position: { x: 100, y: 100 },
-					size: { width: 400, height: 300 },
-					zIndex: 1,
-					displayState: "normal",
-				},
-			]}
-		>
-			<div
-				ref={containerRef}
-				style={{ position: "relative", height: "100vh" }}
-			>
-				<MyWindow windowId="window-1" />
-			</div>
-		</WindowManagerProvider>
-	);
+  return (
+    <WindowManagerProvider
+      boundsRef={containerRef}
+      defaultWindows={[
+        {
+          id: "window-1",
+          title: "My Window",
+          position: { x: 100, y: 100 },
+          size: { width: 400, height: 300 },
+          zIndex: 1,
+          displayState: "normal",
+        },
+      ]}
+    >
+      <div ref={containerRef} style={{ position: "relative", height: "100vh" }}>
+        <MyWindow windowId="window-1" />
+      </div>
+    </WindowManagerProvider>
+  );
 }
 ```
 
-## Creating a Window Component
-
-Now create your window component with drag and resize capabilities:
+### Creating a Window Component
 
 ```tsx
 import { useRef } from "react";
 import {
-	Window,
-	useWindowManager,
-	useWindowDrag,
-	useResize,
+  Window,
+  useWindowManager,
+  useWindowDrag,
+  useResize,
 } from "glazier";
 
 function MyWindow({ windowId }: { windowId: string }) {
-	const { state, updateWindow, closeWindow } = useWindowManager();
-	const win = state.windows.find((w) => w.id === windowId);
-	const titleBarRef = useRef<HTMLDivElement>(null);
+  const { state, updateWindow, closeWindow } = useWindowManager();
+  const win = state.windows.find((w) => w.id === windowId);
+  const titleBarRef = useRef<HTMLDivElement>(null);
 
-	const { isDragging, dragHandleProps } = useWindowDrag({
-		windowId,
-		dragHandleRef: titleBarRef,
-		enableDoubleClickMaximize: true,
-	});
+  const { isDragging, dragHandleProps } = useWindowDrag({
+    windowId,
+    dragHandleRef: titleBarRef,
+    enableDoubleClickMaximize: true,
+  });
 
-	const { resizeHandleProps } = useResize(
-		win?.size ?? { width: 400, height: 300 },
-		win?.position ?? { x: 0, y: 0 },
-		{
-			minWidth: 200,
-			minHeight: 150,
-			onResize: (size, position) =>
-				updateWindow(windowId, { size, position }),
-		}
-	);
+  const { resizeHandleProps } = useResize(
+    win?.size ?? { width: 400, height: 300 },
+    win?.position ?? { x: 0, y: 0 },
+    {
+      minWidth: 200,
+      minHeight: 150,
+      onResize: (size, position) =>
+        updateWindow(windowId, { size, position }),
+    }
+  );
 
-	if (!win) return null;
+  if (!win) return null;
 
-	return (
-		<Window id={windowId}>
-			{/* Title bar - drag handle */}
-			<div ref={titleBarRef} {...dragHandleProps}>
-				{win.title}
-				<button onClick={() => closeWindow(windowId)}>×</button>
-			</div>
+  return (
+    <Window id={windowId}>
+      {/* Title bar - drag handle */}
+      <div ref={titleBarRef} {...dragHandleProps}>
+        {win.title}
+        <button onClick={() => closeWindow(windowId)}>×</button>
+      </div>
 
-			{/* Content */}
-			<div>Window content here</div>
+      {/* Content */}
+      <div>Window content here</div>
 
-			{/* Resize handle */}
-			<div {...resizeHandleProps("se")} />
-		</Window>
-	);
+      {/* Resize handle */}
+      <div {...resizeHandleProps("se")} />
+    </Window>
+  );
 }
 ```
 
@@ -104,6 +208,42 @@ The root provider manages all window state. Key props:
 
 - `boundsRef` - Container element for bounds constraints
 - `defaultWindows` - Initial windows to render
+- `registry` - Component registry for Desktop pattern
+
+### defineWindows (glazier/server)
+
+Unified configuration helper. Import from `glazier/server` for server-component compatibility:
+
+```tsx
+import { defineWindows } from "glazier/server";
+
+const windows = defineWindows({
+  home: {
+    title: "Home",
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: "/",
+    icon: { label: "Home", position: { x: 20, y: 20 } },
+  },
+});
+
+// Helpers
+windows.getWindowState("home");  // Get WindowState for opening
+windows.getIconConfigs();        // Get all icon configs
+windows.getPathMap();            // Get path mapping for routing
+windows.ids;                     // ['home']
+```
+
+### WindowFrame System
+
+Composable primitives for window chrome:
+
+- `WindowFrame` - Container with drag context
+- `TitleBar` - Draggable title bar
+- `Title` - Window title display
+- `WindowControls` - Minimize/maximize/close buttons
+- `Content` - Scrollable content area
+- `ResizeHandles` - All 8 resize handles
 
 ### Window Component
 
@@ -112,22 +252,6 @@ The `Window` component handles positioning based on state. It:
 - Reads position/size from context
 - Applies z-index for stacking
 - Handles visibility for minimized state
-
-### useWindowDrag Hook
-
-Makes elements draggable:
-
-- `dragHandleRef` - The element that initiates drag (usually title bar)
-- `enableDoubleClickMaximize` - Double-click to maximize
-- Returns `dragHandleProps` to spread on your drag handle
-
-### useResize Hook
-
-Adds resize behavior:
-
-- Takes current size and position
-- `onResize` callback updates state
-- `resizeHandleProps('se')` returns props for southeast corner (or any direction)
 
 ## Next Steps
 

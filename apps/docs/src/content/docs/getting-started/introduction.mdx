@@ -30,32 +30,105 @@ Glazier provides unstyled, fully accessible window management components for Rea
 	</Card>
 </CardGrid>
 
+## What's New
+
+The latest version introduces powerful abstractions to reduce boilerplate:
+
+- **`defineWindows`** - Unified configuration for windows, icons, and routes
+- **`WindowFrame` composables** - Pre-built TitleBar, Title, WindowControls, Content
+- **`ResizeHandles`** - Ready-to-use resize handles component
+- **`useIconLauncher`** - Hook for "open or focus" desktop icon pattern
+- **`createRegistry`** - Type-safe component registry helper
+- **`createBrowserAdapter`** - Framework-agnostic URL routing
+
 ## Why Glazier?
 
 ### Headless Design
 
 Glazier provides behavior, not appearance. Components handle positioning, state management, and user interactions—you provide all styling. This gives you complete control over the look and feel.
 
-### Component Registry Pattern
+### Unified Configuration with defineWindows
 
-For apps with multiple window types, use the registry pattern. Define components once, then open windows by referencing their `componentId`. This makes window state fully serializable (great for localStorage or URL persistence).
+Instead of maintaining separate configs for windows, icons, and routes, define everything in one place:
 
 ```tsx
-const registry = {
-	settings: SettingsPanel,
-	terminal: TerminalApp,
-	notes: NotesApp,
-};
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  home: {
+    title: 'Home',
+    defaultPosition: { x: 100, y: 100 },
+    defaultSize: { width: 400, height: 300 },
+    path: '/',
+    icon: {
+      label: 'Home',
+      iconKey: 'home',
+      position: { x: 20, y: 20 },
+    },
+  },
+  settings: {
+    title: 'Settings',
+    defaultPosition: { x: 150, y: 150 },
+    defaultSize: { width: 350, height: 400 },
+    path: '/settings',
+  },
+});
+
+// Use the helpers
+windows.getWindowState('home');   // WindowState for opening
+windows.getIconConfigs();         // All icon configs
+windows.getPathMap();             // { home: '/', settings: '/settings' }
+```
+
+### WindowFrame Composables
+
+Reduce window chrome boilerplate from ~70 lines to ~15:
+
+```tsx
+import {
+  WindowFrame,
+  TitleBar,
+  Title,
+  WindowControls,
+  Content,
+  ResizeHandles,
+} from 'glazier';
+
+function MyWindow({ windowId }: { windowId: string }) {
+  return (
+    <WindowFrame windowId={windowId} enableDoubleClickMaximize enableSnapToEdges>
+      <TitleBar className="h-10 bg-slate-900">
+        <Title />
+        <WindowControls />
+      </TitleBar>
+      <Content className="p-4">Your content here</Content>
+      <ResizeHandles windowId={windowId} minWidth={300} minHeight={200} />
+    </WindowFrame>
+  );
+}
+```
+
+### Component Registry Pattern
+
+For apps with multiple window types, use the registry pattern with type safety:
+
+```tsx
+import { createRegistry } from 'glazier';
+
+const registry = createRegistry(windows.ids, {
+  home: HomeWindow,
+  settings: SettingsWindow,
+});
 
 <WindowManagerProvider registry={registry}>
-	<Desktop>
-		{({ Component, windowId, componentProps }) => (
-			<Window id={windowId}>
-				<Component windowId={windowId} {...componentProps} />
-			</Window>
-		)}
-	</Desktop>
-</WindowManagerProvider>;
+  <Desktop>
+    {({ Component, windowId, componentProps }) => (
+      <Window id={windowId}>
+        <Component windowId={windowId} {...componentProps} />
+      </Window>
+    )}
+  </Desktop>
+</WindowManagerProvider>
 ```
 
 ## Requirements

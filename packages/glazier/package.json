@@ -19,8 +19,14 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"types": "./dist/index.d.ts",
 			"require": "./dist/index.js",
 			"import": "./dist/index.mjs"
+		},
+		"./server": {
+			"types": "./dist/server/index.d.ts",
+			"require": "./dist/server/index.js",
+			"import": "./dist/server/index.mjs"
 		}
 	},
 	"files": ["dist", "!dist/*.map"],
