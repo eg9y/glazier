@@ -10,31 +10,18 @@ import {
 } from "../utils/resizeHandleStyles";
 
 export interface ResizeHandlesProps {
-	/** The window ID to attach resize behavior to */
 	windowId: string;
-	/** Edge handle thickness in pixels (default: 4) */
 	thickness?: number;
-	/** Corner handle size in pixels (default: 8) */
 	cornerSize?: number;
-	/** Which handles to render (default: all 8) */
 	directions?: ResizeDirection[];
-	/** Don't render when maximized (default: true) */
 	hideWhenMaximized?: boolean;
-	/** Minimum width constraint */
 	minWidth?: SizeValue;
-	/** Minimum height constraint */
 	minHeight?: SizeValue;
-	/** Maximum width constraint */
 	maxWidth?: SizeValue;
-	/** Maximum height constraint */
 	maxHeight?: SizeValue;
-	/** Base class name applied to all handles */
 	className?: string;
-	/** Per-direction class names */
 	directionClassNames?: Partial<Record<ResizeDirection, string>>;
-	/** Per-direction styles (merged with computed styles) */
 	directionStyles?: Partial<Record<ResizeDirection, CSSProperties>>;
-	/** Custom render function for each handle */
 	renderHandle?: (props: {
 		direction: ResizeDirection;
 		handleProps: ReturnType<ReturnType<typeof useResize>["resizeHandleProps"]>;
@@ -43,38 +30,6 @@ export interface ResizeHandlesProps {
 	}) => ReactNode;
 }
 
-/**
- * Pre-built resize handles component that eliminates boilerplate.
- *
- * @example
- * ```tsx
- * // Basic usage
- * <ResizeHandles windowId={windowId} />
- *
- * // With constraints
- * <ResizeHandles
- *   windowId={windowId}
- *   minWidth={200}
- *   minHeight={150}
- *   maxWidth="80vw"
- * />
- *
- * // Custom styling
- * <ResizeHandles
- *   windowId={windowId}
- *   className="hover:bg-blue-500/20"
- *   directionClassNames={{ se: "bg-blue-500/50" }}
- * />
- *
- * // Custom render
- * <ResizeHandles
- *   windowId={windowId}
- *   renderHandle={({ direction, handleProps, style }) => (
- *     <div {...handleProps} style={style} data-direction={direction} />
- *   )}
- * />
- * ```
- */
 export function ResizeHandles({
 	windowId,
 	thickness = 4,
@@ -112,7 +67,6 @@ export function ResizeHandles({
 		},
 	);
 
-	// Don't render when maximized
 	if (hideWhenMaximized && displayState === "maximized") {
 		return null;
 	}

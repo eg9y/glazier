@@ -1,17 +1,5 @@
 import type { RoutingAdapter } from "../types";
 
-/**
- * Create a routing adapter for browser history API.
- * Uses replaceState to avoid adding history entries on every window focus.
- *
- * @example
- * ```tsx
- * const { onFocusChange } = useWindowRouting({
- *   pathMap: { home: '/', about: '/about' },
- *   adapter: createBrowserAdapter(),
- * });
- * ```
- */
 export function createBrowserAdapter(): RoutingAdapter {
 	return {
 		getCurrentPath() {

@@ -1,9 +1,6 @@
 import type { CSSProperties } from "react";
 import type { ResizeDirection } from "../types";
 
-/**
- * Cursor styles for each resize direction.
- */
 export const RESIZE_CURSORS: Record<ResizeDirection, string> = {
 	n: "ns-resize",
 	s: "ns-resize",
@@ -15,13 +12,6 @@ export const RESIZE_CURSORS: Record<ResizeDirection, string> = {
 	se: "nwse-resize",
 };
 
-/**
- * Get CSS styles for a resize handle.
- *
- * @param direction - The resize direction
- * @param thickness - Edge handle thickness in pixels (default: 4)
- * @param cornerSize - Corner handle size in pixels (default: 8)
- */
 export function getResizeHandleStyle(
 	direction: ResizeDirection,
 	thickness = 4,
@@ -103,9 +93,6 @@ export function getResizeHandleStyle(
 	}
 }
 
-/**
- * All resize directions.
- */
 export const ALL_RESIZE_DIRECTIONS: ResizeDirection[] = [
 	"n",
 	"s",

@@ -4,24 +4,17 @@ import { useWindowFrame } from "./WindowFrameContext";
 export type WindowControlType = "minimize" | "maximize" | "close";
 
 export interface WindowControlsProps {
-	/** Additional class name for the container */
 	className?: string;
-	/** Additional styles for the container */
 	style?: CSSProperties;
-	/** Which controls to show (default: all) */
 	controls?: WindowControlType[];
-	/** Custom icons for each control */
 	icons?: {
 		minimize?: ReactNode;
 		maximize?: ReactNode;
 		restore?: ReactNode;
 		close?: ReactNode;
 	};
-	/** Class name for individual buttons */
 	buttonClassName?: string;
-	/** Styles for individual buttons */
 	buttonStyle?: CSSProperties;
-	/** Class name for close button (merged with buttonClassName) */
 	closeButtonClassName?: string;
 }
 
@@ -110,34 +103,6 @@ function CloseIcon() {
 	);
 }
 
-/**
- * Pre-built window control buttons (minimize, maximize/restore, close).
- *
- * @example
- * ```tsx
- * // Basic usage with defaults
- * <WindowControls />
- *
- * // With custom styling
- * <WindowControls
- *   className="flex gap-1"
- *   buttonClassName="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"
- *   closeButtonClassName="hover:bg-red-600"
- * />
- *
- * // Only some controls
- * <WindowControls controls={['minimize', 'close']} />
- *
- * // Custom icons
- * <WindowControls
- *   icons={{
- *     minimize: <MinusIcon />,
- *     maximize: <ExpandIcon />,
- *     close: <XIcon />,
- *   }}
- * />
- * ```
- */
 export function WindowControls({
 	className,
 	style,
