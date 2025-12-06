@@ -5,7 +5,7 @@ import { WindowChrome } from "./WindowChrome";
 
 interface HomeWindowProps {
 	windowId: string;
-	onSnapZoneChange?: (zone: "left" | "right" | null) => void;
+	onSnapZoneChange?: (zone: "left" | "right" | "top" | null) => void;
 	children?: ReactNode;
 }
 

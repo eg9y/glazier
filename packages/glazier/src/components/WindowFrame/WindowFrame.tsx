@@ -16,6 +16,10 @@ export interface WindowFrameProps {
 	enableDoubleClickMaximize?: boolean;
 	enableSnapToEdges?: boolean;
 	onSnapZoneChange?: (zone: "left" | "right" | "top" | null) => void;
+	/** Called when window drag starts. Useful for triggering animations. */
+	onDragStart?: () => void;
+	/** Called when window drag ends. Useful for triggering animations. */
+	onDragEnd?: () => void;
 }
 
 export function WindowFrame({
@@ -26,6 +30,8 @@ export function WindowFrame({
 	enableDoubleClickMaximize = true,
 	enableSnapToEdges = true,
 	onSnapZoneChange,
+	onDragStart,
+	onDragEnd,
 }: WindowFrameProps): JSX.Element {
 	const { title, close, minimize, maximize, restore, displayState } =
 		useWindow(windowId);
@@ -41,6 +47,8 @@ export function WindowFrame({
 		enableSnapToEdges,
 		onSnapZoneEnter: (zone) => onSnapZoneChange?.(zone),
 		onSnapZoneLeave: () => onSnapZoneChange?.(null),
+		onDragStart,
+		onDragEnd,
 	});
 
 	const contextValue: WindowFrameContextValue = useMemo(

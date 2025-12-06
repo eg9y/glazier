@@ -22,6 +22,10 @@ export interface UseWindowDragOptions {
 	onSnapZoneEnter?: (zone: SnapZone) => void;
 	/** Called when leaving a snap zone during drag */
 	onSnapZoneLeave?: () => void;
+	/** Called when drag starts. Useful for triggering animations. */
+	onDragStart?: () => void;
+	/** Called when drag ends. Useful for triggering animations. */
+	onDragEnd?: () => void;
 }
 
 export interface UseWindowDragReturn {
@@ -124,6 +128,8 @@ export function useWindowDrag({
 	enableSnapToEdges = false,
 	onSnapZoneEnter,
 	onSnapZoneLeave,
+	onDragStart,
+	onDragEnd,
 }: UseWindowDragOptions): UseWindowDragReturn {
 	const {
 		state,
@@ -270,6 +276,7 @@ export function useWindowDrag({
 			// Resolve and cache window size at drag start for performance
 			// (avoids creating/removing DOM elements on every pointer move)
 			cacheResolvedWindowSize();
+			onDragStart?.();
 		},
 		onDrag: (position: Position, delta: Position) => {
 			if (!win) {
@@ -332,6 +339,7 @@ export function useWindowDrag({
 			setActiveSnapZone(null);
 			previousSnapZoneRef.current = null;
 			onSnapZoneLeave?.();
+			onDragEnd?.();
 		},
 		getBoundsConstraint: () => {
 			// Skip bounds constraint if a snap action occurred (snap sets its own position)

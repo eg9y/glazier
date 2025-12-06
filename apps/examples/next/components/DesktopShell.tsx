@@ -106,7 +106,7 @@ function DesktopContentWithRouting({ containerRef }: DesktopContentProps) {
  */
 function DesktopContent({ containerRef }: DesktopContentProps) {
 	const { deselectAllIcons } = useWindowManager();
-	const [snapPreview, setSnapPreview] = useState<"left" | "right" | null>(null);
+	const [snapPreview, setSnapPreview] = useState<"left" | "right" | "top" | null>(null);
 
 	return (
 		<div
@@ -174,7 +174,7 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 					return (
 						<Window
 							id={windowId}
-							className="pointer-events-auto overflow-hidden rounded-lg border border-slate-600 bg-slate-800 shadow-xl"
+							className="pointer-events-auto"
 						>
 							<WindowShell
 								windowId={windowId}
