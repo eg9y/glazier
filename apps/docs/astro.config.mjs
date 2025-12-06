@@ -35,6 +35,11 @@ export default defineConfig({
 							attrs: { target: "_blank" },
 						},
 						{
+							label: "Astro Example",
+							link: "/examples/astro/",
+							attrs: { target: "_blank" },
+						},
+						{
 							label: "Storybook",
 							link: "/storybook/",
 							attrs: { target: "_blank" },
