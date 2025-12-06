@@ -19,6 +19,12 @@
 - Drag to reposition
 - Resize from edges/corners with min/max constraints
 
+### Window Snapping
+- Left/Right edge drag → 50% split
+- Top edge drag → Full maximize
+- Visual preview overlay during drag
+- Configurable snap threshold (default 50px)
+
 ### Z-Index Strategy
 - Auto-focus on click brings window to front
 - Incrementing z-index counter with periodic rebalancing (when highest z exceeds threshold, normalize all windows)
@@ -28,8 +34,6 @@
 - `normal` | `minimized` | `maximized`
 
 ### Window Relationships
-- Optional `parentId` field for window hierarchy
-- Child windows minimize/close with parent
 - Modal support planned for v2 (blocking behavior)
 
 ---
@@ -121,6 +125,16 @@ const { isDragging, dragHandleProps } = useDrag(windowId);
 const { isResizing, resizeHandleProps } = useResize(windowId, 'se'); // direction
 ```
 
+### useWindowTransition
+Animation state for integrating with animation libraries:
+```tsx
+const {
+  isDragging,     // true during drag
+  isResizing,     // true during resize
+  isSnapping,     // true during snap transition
+} = useWindowTransition(windowId);
+```
+
 ---
 
 ## State & Persistence
@@ -154,7 +168,12 @@ interface WindowState {
   size: { width: number; height: number };
   state: 'normal' | 'minimized' | 'maximized';
   zIndex: number;
-  parentId?: string;
+  constraints?: {                // Optional size constraints
+    minWidth?: number;
+    maxWidth?: number;
+    minHeight?: number;
+    maxHeight?: number;
+  };
 }
 
 // Type-safe registry
@@ -244,10 +263,6 @@ Framework-specific examples provided in documentation for Next.js, React Router,
 - Focus restoration on window close
 - Screen reader announcements for state changes
 
-### Priority 3 (v1.2+)
-- Keyboard shortcuts (Alt+F4, Alt+Tab) — opt-in via `<KeyboardShortcuts />` component
-- Arrow key navigation between taskbar items
-
 ---
 
 ## Technical Constraints
@@ -326,6 +341,38 @@ Same pattern as drag, but calculates delta from edge/corner and updates `size` i
 - Throttle state updates if needed (though pointer events are already optimized)
 - Consider `requestAnimationFrame` batching for many simultaneous updates
 
+### Touch & Mobile
+- Pointer Events API handles mouse, touch, and pen uniformly
+- `touchAction: 'none'` set on drag/resize handles
+- ResizeHandles supports configurable `thickness` for larger touch targets
+
+---
+
+## Animation Support
+
+### Philosophy
+Glazier provides animation *hooks*, not built-in animations. Integrate with your preferred animation library (Framer Motion, CSS transitions, etc.).
+
+### Example with Framer Motion
+```tsx
+function AnimatedWindow({ id, children }) {
+  const { isDragging, isSnapping } = useWindowTransition(id);
+
+  return (
+    <Window id={id}>
+      <motion.div
+        animate={{
+          scale: isDragging ? 1.02 : 1,
+          transition: { duration: isSnapping ? 0.2 : 0 }
+        }}
+      >
+        {children}
+      </motion.div>
+    </Window>
+  );
+}
+```
+
 ---
 
 ## Non-Goals (v1)
@@ -335,9 +382,10 @@ Same pattern as drag, but calculates delta from edge/corner and updates `size` i
 - File system abstraction
 - Built-in applications
 - Multi-monitor support
-- Window snapping / tiling
+- Window tiling layouts (cascade, grid, etc.)
 - Bundled themes
 - Modal blocking behavior (planned v2)
+- Window groups / tabs
 
 ---
 

@@ -7,7 +7,7 @@ import { isNumericSize, resolveSizeValueToPixels } from "../utils/sizeUtils";
 import { useDrag } from "./useDrag";
 import { useWindowManager } from "./useWindowManager";
 
-export type SnapZone = "left" | "right";
+export type SnapZone = "left" | "right" | "top";
 
 export interface UseWindowDragOptions {
 	windowId: string;
@@ -42,8 +42,13 @@ const SNAP_EDGE_THRESHOLD = 50; // pixels from edge
 /** Detect which snap zone the cursor is in based on position */
 function detectSnapZone(
 	cursorX: number,
+	cursorY: number,
 	containerWidth: number,
 ): SnapZone | null {
+	// Top edge takes priority for maximize
+	if (cursorY <= SNAP_EDGE_THRESHOLD) {
+		return "top";
+	}
 	if (cursorX <= SNAP_EDGE_THRESHOLD) {
 		return "left";
 	}
@@ -97,7 +102,13 @@ function calculateRestoredPosition(
 function calculateSnapBounds(
 	snapZone: SnapZone,
 	containerBounds: ContainerBounds,
-): { position: Position; size: { width: number; height: number } } {
+):
+	| { position: Position; size: { width: number; height: number } }
+	| "maximize" {
+	if (snapZone === "top") {
+		// Top edge triggers maximize
+		return "maximize";
+	}
 	const halfWidth = containerBounds.width / 2;
 	return {
 		position: snapZone === "left" ? { x: 0, y: 0 } : { x: halfWidth, y: 0 },
@@ -202,7 +213,8 @@ export function useWindowDrag({
 
 			const containerRect = containerEl.getBoundingClientRect();
 			const cursorX = position.x - containerRect.left;
-			const newZone = detectSnapZone(cursorX, containerBounds.width);
+			const cursorY = position.y - containerRect.top;
+			const newZone = detectSnapZone(cursorX, cursorY, containerBounds.width);
 
 			if (newZone !== previousSnapZoneRef.current) {
 				if (newZone) {
@@ -297,14 +309,19 @@ export function useWindowDrag({
 				if (containerBounds) {
 					const snapBounds = calculateSnapBounds(snapZone, containerBounds);
 
-					updateWindow(windowId, {
-						position: snapBounds.position,
-						size: snapBounds.size,
-						previousBounds:
-							win.displayState === "normal"
-								? { position: win.position, size: win.size }
-								: win.previousBounds,
-					});
+					if (snapBounds === "maximize") {
+						// Top edge triggers maximize
+						maximizeWindow(windowId);
+					} else {
+						updateWindow(windowId, {
+							position: snapBounds.position,
+							size: snapBounds.size,
+							previousBounds:
+								win.displayState === "normal"
+									? { position: win.position, size: win.size }
+									: win.previousBounds,
+						});
+					}
 
 					// Mark that snap occurred so bounds constraint is skipped
 					didSnapRef.current = true;

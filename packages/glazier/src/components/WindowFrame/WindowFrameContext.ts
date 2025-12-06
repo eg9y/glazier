@@ -18,7 +18,7 @@ export interface WindowFrameContextValue {
 		onPointerUp: (e: PointerEvent<Element>) => void;
 		style: { touchAction: string };
 	};
-	activeSnapZone: "left" | "right" | null;
+	activeSnapZone: "left" | "right" | "top" | null;
 }
 
 export const WindowFrameContext = createContext<WindowFrameContextValue | null>(

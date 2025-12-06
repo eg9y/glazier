@@ -15,9 +15,6 @@ export function SnapPreviewOverlay({ zone, style }: SnapPreviewOverlayProps) {
 
 	const baseStyle: CSSProperties = {
 		position: "absolute",
-		top: 0,
-		bottom: 0,
-		width: "50%",
 		backgroundColor: "rgba(0, 120, 215, 0.2)",
 		border: "2px dashed rgba(0, 120, 215, 0.6)",
 		boxSizing: "border-box",
@@ -27,8 +24,16 @@ export function SnapPreviewOverlay({ zone, style }: SnapPreviewOverlayProps) {
 		...style,
 	};
 
-	const positionStyle: CSSProperties =
-		zone === "left" ? { left: 0 } : { right: 0 };
+	const getPositionStyle = (): CSSProperties => {
+		switch (zone) {
+			case "left":
+				return { top: 0, bottom: 0, left: 0, width: "50%" };
+			case "right":
+				return { top: 0, bottom: 0, right: 0, width: "50%" };
+			case "top":
+				return { top: 0, left: 0, right: 0, bottom: 0 };
+		}
+	};
 
-	return <div style={{ ...baseStyle, ...positionStyle }} />;
+	return <div style={{ ...baseStyle, ...getPositionStyle() }} />;
 }

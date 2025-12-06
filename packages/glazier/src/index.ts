@@ -107,6 +107,11 @@ export type {
 	UseWindowRoutingOptions,
 	UseWindowRoutingReturn,
 } from "./hooks/useWindowRouting";
+export { useWindowTransition } from "./hooks/useWindowTransition";
+export type {
+	WindowTransitionState,
+	UseWindowTransitionReturn,
+} from "./hooks/useWindowTransition";
 
 // Utils
 export { generateWindowId } from "./utils/id";

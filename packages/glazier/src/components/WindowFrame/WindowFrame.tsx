@@ -15,7 +15,7 @@ export interface WindowFrameProps {
 	style?: CSSProperties;
 	enableDoubleClickMaximize?: boolean;
 	enableSnapToEdges?: boolean;
-	onSnapZoneChange?: (zone: "left" | "right" | null) => void;
+	onSnapZoneChange?: (zone: "left" | "right" | "top" | null) => void;
 }
 
 export function WindowFrame({
