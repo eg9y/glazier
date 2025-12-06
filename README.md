@@ -16,7 +16,7 @@ Glazier provides unstyled, fully accessible window management components for Rea
 
 - **Draggable windows** with pointer capture for reliable tracking
 - **Resizable** from 8 directions (n, s, e, w, ne, nw, se, sw)
-- **Snap-to-edges** with visual preview (left/right 50% split)
+- **Snap-to-edges** with visual preview (left/right/top split)
 - **Maximize/minimize/restore** with bounds memory
 - **Z-index management** (bring to front, send to back)
 - **Double-click to maximize** (optional)
@@ -24,6 +24,7 @@ Glazier provides unstyled, fully accessible window management components for Rea
 - **Desktop icons** with grid snapping and drag support
 - **Icon selection** with multi-select capability
 - **Icon-to-window launching** - double-click icons to open/focus windows
+- **Window animations** - open/close animations from icon position, drag shrink effects
 - **Component registry pattern** for declarative, serializable window state
 - **Headless design** - zero styles included, full control over appearance
 - **TypeScript** - fully typed API
@@ -36,6 +37,8 @@ Glazier provides unstyled, fully accessible window management components for Rea
 - **`useIconLauncher`** - Hook for "open or focus" desktop icon pattern
 - **`createRegistry`** - Type-safe component registry helper
 - **`createBrowserAdapter`** - Framework-agnostic URL routing adapter
+- **Animation support** - `closingWindowIds` and `finalizeClose` for smooth open/close animations
+- **Top snap zone** - Windows can now snap to top edge for maximize
 
 ## Installation
 
@@ -364,6 +367,67 @@ const pathMap = windows.getPathMap();
     }
   }}
 >
+```
+
+### Window Animations
+
+Glazier provides animation hooks for smooth window open/close effects. The `closingWindowIds` Set and `finalizeClose` function enable delayed window removal for exit animations:
+
+```tsx
+import { useWindowManager, toCSSValue } from 'glazier';
+
+function AnimatedWindow({ id, children }) {
+  const { state, closingWindowIds, finalizeClose } = useWindowManager();
+  const windowState = state.windows.find((w) => w.id === id);
+  const isClosing = closingWindowIds.has(id);
+
+  // Trigger animation removal after close animation
+  useEffect(() => {
+    if (isClosing) {
+      const timer = setTimeout(() => finalizeClose(id), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isClosing, id, finalizeClose]);
+
+  // Use windowState.animationSource for icon position (set by launchIcon)
+  const { animationSource, position } = windowState;
+
+  return (
+    <div
+      style={{
+        animation: isClosing
+          ? 'windowClose 250ms ease-out forwards'
+          : 'windowOpen 250ms ease-out forwards',
+        '--source-x': `${animationSource?.x ?? 0}px`,
+        '--source-y': `${animationSource?.y ?? 0}px`,
+        '--target-x': `${position.x}px`,
+        '--target-y': `${position.y}px`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+```
+
+For drag shrink effects, use `onDragStart` and `onDragEnd` callbacks on `WindowFrame`:
+
+```tsx
+function WindowWithDragShrink({ windowId, children }) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+    <div style={{ transform: isDragging ? 'scale(0.98)' : 'scale(1)' }}>
+      <WindowFrame
+        windowId={windowId}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={() => setIsDragging(false)}
+      >
+        {children}
+      </WindowFrame>
+    </div>
+  );
+}
 ```
 
 ## Components

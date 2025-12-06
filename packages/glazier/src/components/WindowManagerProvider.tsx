@@ -53,6 +53,11 @@ export function WindowManagerProvider({
 	const [icons, setIcons] = useState<IconState[]>(defaultIcons);
 	const [selectedIconIds, setSelectedIconIds] = useState<string[]>([]);
 
+	// Animation support: track windows in closing animation
+	const [closingWindowIds, setClosingWindowIds] = useState<Set<string>>(
+		() => new Set(),
+	);
+
 	const openWindow = useCallback((config: WindowConfig) => {
 		setState((prev) => {
 			if (prev.windows.some((w) => w.id === config.id)) {
@@ -72,17 +77,37 @@ export function WindowManagerProvider({
 	}, []);
 
 	const closeWindow = useCallback((id: string) => {
+		// Mark window as closing (triggers animation)
+		// Window stays in state until finalizeClose is called
+		setClosingWindowIds((prev) => new Set(prev).add(id));
+
+		// Update active window immediately
 		setState((prev) => {
-			const filtered = prev.windows.filter((w) => w.id !== id);
+			const otherWindows = prev.windows.filter((w) => w.id !== id);
 			const newActiveId =
 				prev.activeWindowId === id
-					? (filtered[filtered.length - 1]?.id ?? null)
+					? (otherWindows[otherWindows.length - 1]?.id ?? null)
 					: prev.activeWindowId;
 			return {
-				windows: filtered,
+				...prev,
 				activeWindowId: newActiveId,
 			};
 		});
+	}, []);
+
+	const finalizeClose = useCallback((id: string) => {
+		// Remove from closing set
+		setClosingWindowIds((prev) => {
+			const next = new Set(prev);
+			next.delete(id);
+			return next;
+		});
+
+		// Actually remove from state
+		setState((prev) => ({
+			...prev,
+			windows: prev.windows.filter((w) => w.id !== id),
+		}));
 	}, []);
 
 	const focusWindow = useCallback((id: string) => {
@@ -312,6 +337,8 @@ export function WindowManagerProvider({
 				componentProps: icon.componentProps,
 				position: defaultConfig?.position ?? { x: 100, y: 100 },
 				size: defaultConfig?.size ?? { width: 400, height: 300 },
+				// Store icon position for open/close animations
+				animationSource: icon.position,
 			});
 		},
 		[icons, openWindow, defaultWindowConfigs],
@@ -350,6 +377,9 @@ export function WindowManagerProvider({
 			restoreWindow,
 			boundsRef: boundsRef ?? null,
 			getContainerBounds,
+			// Animation support
+			closingWindowIds,
+			finalizeClose,
 			// Icon state and operations
 			icons,
 			selectedIconIds,
@@ -379,6 +409,8 @@ export function WindowManagerProvider({
 			restoreWindow,
 			boundsRef,
 			getContainerBounds,
+			closingWindowIds,
+			finalizeClose,
 			icons,
 			selectedIconIds,
 			addIcon,

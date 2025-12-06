@@ -33,6 +33,8 @@ export interface WindowState {
 	componentId?: string;
 	/** Props to pass to the resolved component (must be serializable) */
 	componentProps?: Record<string, unknown>;
+	/** Source position for open/close animations (e.g., icon position) */
+	animationSource?: Position;
 }
 
 export interface WindowManagerState {

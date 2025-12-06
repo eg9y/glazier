@@ -10,9 +10,9 @@ import {
 	useIconLauncher,
 	useWindowManager,
 	useWindowRouting,
-	Window,
 	WindowManagerProvider,
 } from "glazier";
+import { AnimatedWindow } from "./AnimatedWindow";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -111,7 +111,7 @@ function DesktopContentWithRouting({ containerRef }: DesktopContentProps) {
  */
 function DesktopContent({ containerRef }: DesktopContentProps) {
 	const { deselectAllIcons } = useWindowManager();
-	const [snapPreview, setSnapPreview] = useState<"left" | "right" | null>(null);
+	const [snapPreview, setSnapPreview] = useState<"left" | "right" | "top" | null>(null);
 
 	return (
 		<div
@@ -160,7 +160,7 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 					// Cast needed due to React 18 vs 19 types mismatch in registry
 					const WindowShell = Component as React.ComponentType<{
 						windowId: string;
-						onSnapZoneChange: (zone: "left" | "right" | null) => void;
+						onSnapZoneChange: (zone: "left" | "right" | "top" | null) => void;
 						children?: ReactNode;
 					}>;
 
@@ -177,9 +177,9 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 					};
 
 					return (
-						<Window
+						<AnimatedWindow
 							id={windowId}
-							className="pointer-events-auto overflow-hidden rounded-lg border border-slate-600 bg-slate-800 shadow-xl"
+							className="pointer-events-auto"
 						>
 							<WindowShell
 								windowId={windowId}
@@ -188,7 +188,7 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 							>
 								{contentMap[componentId]}
 							</WindowShell>
-						</Window>
+						</AnimatedWindow>
 					);
 				}}
 			</Desktop>

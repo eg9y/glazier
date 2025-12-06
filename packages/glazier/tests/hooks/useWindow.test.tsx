@@ -86,6 +86,14 @@ describe("useWindow", () => {
 			result.current.manager.closeWindow("win-1");
 		});
 
+		// closeWindow marks window as closing (for animation)
+		expect(result.current.manager.closingWindowIds.has("win-1")).toBe(true);
+
+		// finalizeClose actually removes the window
+		act(() => {
+			result.current.manager.finalizeClose("win-1");
+		});
+
 		expect(result.current.manager.state.windows).toHaveLength(1);
 		expect(
 			result.current.manager.state.windows.find((w) => w.id === "win-1"),

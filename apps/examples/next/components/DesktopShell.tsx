@@ -10,9 +10,9 @@ import {
 	useIconLauncher,
 	useWindowManager,
 	useWindowRouting,
-	Window,
 	WindowManagerProvider,
 } from "glazier";
+import { AnimatedWindow } from "./AnimatedWindow";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -172,7 +172,7 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 					};
 
 					return (
-						<Window
+						<AnimatedWindow
 							id={windowId}
 							className="pointer-events-auto"
 						>
@@ -183,7 +183,7 @@ function DesktopContent({ containerRef }: DesktopContentProps) {
 							>
 								{contentMap[componentId]}
 							</WindowShell>
-						</Window>
+						</AnimatedWindow>
 					);
 				}}
 			</Desktop>

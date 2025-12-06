@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Taskbar, WindowManagerProvider } from "../../src";
+import { Taskbar, WindowManagerProvider, useWindowManager } from "../../src";
 
 describe("Taskbar", () => {
 	it("renders with render prop pattern", () => {
@@ -203,6 +203,25 @@ describe("Taskbar", () => {
 	});
 
 	it("provides closeWindow function", () => {
+		// Helper component to access finalizeClose
+		function TestHelper() {
+			const { closingWindowIds, finalizeClose } = useWindowManager();
+			return (
+				<>
+					<span data-testid="closing">
+						{closingWindowIds.has("win-1") ? "closing" : "not-closing"}
+					</span>
+					<button
+						type="button"
+						data-testid="finalize"
+						onClick={() => finalizeClose("win-1")}
+					>
+						Finalize
+					</button>
+				</>
+			);
+		}
+
 		render(
 			<WindowManagerProvider
 				defaultWindows={[
@@ -230,12 +249,21 @@ describe("Taskbar", () => {
 						</div>
 					)}
 				</Taskbar>
+				<TestHelper />
 			</WindowManagerProvider>,
 		);
 
 		expect(screen.getByTestId("count")).toHaveTextContent("1");
+		expect(screen.getByTestId("closing")).toHaveTextContent("not-closing");
 
+		// closeWindow marks window as closing (for animation)
 		fireEvent.click(screen.getByTestId("close"));
+
+		expect(screen.getByTestId("closing")).toHaveTextContent("closing");
+		expect(screen.getByTestId("count")).toHaveTextContent("1"); // Still in state
+
+		// finalizeClose actually removes the window
+		fireEvent.click(screen.getByTestId("finalize"));
 
 		expect(screen.getByTestId("count")).toHaveTextContent("0");
 	});

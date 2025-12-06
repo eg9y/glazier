@@ -32,6 +32,12 @@ export interface WindowManagerContextValue {
 	/** Get current container bounds, or null if boundsRef is not set */
 	getContainerBounds: () => ContainerBounds | null;
 
+	// Animation support
+	/** Set of window IDs currently in closing animation */
+	closingWindowIds: Set<string>;
+	/** Complete the close animation and remove the window from state */
+	finalizeClose: (id: string) => void;
+
 	// Icon state and operations
 	/** All desktop icons */
 	icons: IconState[];

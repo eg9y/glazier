@@ -132,6 +132,14 @@ describe("useWindowManager", () => {
 				result.current.closeWindow("win-1");
 			});
 
+			// closeWindow marks window as closing (for animation)
+			expect(result.current.closingWindowIds.has("win-1")).toBe(true);
+
+			// finalizeClose actually removes the window
+			act(() => {
+				result.current.finalizeClose("win-1");
+			});
+
 			expect(result.current.state.windows).toHaveLength(1);
 			expect(result.current.state.windows[0].id).toBe("win-2");
 		});
@@ -166,8 +174,15 @@ describe("useWindowManager", () => {
 				result.current.closeWindow("only-win");
 			});
 
-			expect(result.current.state.windows).toHaveLength(0);
+			// activeWindowId is updated immediately by closeWindow
 			expect(result.current.state.activeWindowId).toBeNull();
+
+			// finalizeClose removes the window from state
+			act(() => {
+				result.current.finalizeClose("only-win");
+			});
+
+			expect(result.current.state.windows).toHaveLength(0);
 		});
 	});
 
