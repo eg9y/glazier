@@ -39,7 +39,10 @@ const registry = createRegistry(windows.ids, {
 
 // Pre-compute path maps for routing
 const pathMap = windows.getPathMap();
-const routingAdapter = createBrowserAdapter();
+
+const routingAdapter = createBrowserAdapter({
+	basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? "",
+});
 
 interface DesktopShellProps {
 	initialWindowId: string;
