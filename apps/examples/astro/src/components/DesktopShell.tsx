@@ -37,8 +37,7 @@ const registry = createRegistry(windows.ids, {
 	contact: ContactWindow,
 });
 
-// Pre-compute path maps for routing
-const pathMap = windows.getPathMap();
+// Routing adapter with base path for this example
 const routingAdapter = createBrowserAdapter({
 	basePath: "/examples/astro",
 });
@@ -88,22 +87,14 @@ interface DesktopContentProps {
 
 /**
  * Wrapper component that sets up routing and renders desktop content.
- * Uses useWindowRouting to sync window focus with URL.
+ * Uses useWindowRouting for automatic bidirectional URL ↔ window sync.
  */
 function DesktopContentWithRouting({ containerRef }: DesktopContentProps) {
-	const { onFocusChange } = useWindowRouting({
-		pathMap,
-		pathToIdMap: windows.getPathToIdMap(),
+	// Bidirectional sync between URL and window focus happens automatically
+	useWindowRouting({
+		windows,
 		adapter: routingAdapter,
-		useComponentId: true,
 	});
-
-	const { state } = useWindowManager();
-
-	// Sync URL when active window changes
-	useEffect(() => {
-		onFocusChange(state.activeWindowId);
-	}, [state.activeWindowId, onFocusChange]);
 
 	return <DesktopContent containerRef={containerRef} />;
 }

@@ -1,73 +1,113 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { WindowDefinitions } from "../config";
 import { createBrowserAdapter } from "../routing/adapters/browser";
 import type { RoutingAdapter } from "../routing/types";
 import { useWindowManager } from "./useWindowManager";
 
 export interface UseWindowRoutingOptions<T extends string = string> {
-	pathMap: Partial<Record<T, string>>;
-	pathToIdMap?: Record<string, T>;
+	/** Window definitions from defineWindows(). Provides paths and window configs. */
+	windows: WindowDefinitions<T>;
+	/** Routing adapter (default: browser adapter with no basePath) */
 	adapter?: RoutingAdapter;
-	/** Use componentId instead of windowId for path lookup (default: true) */
-	useComponentId?: boolean;
+	/** Optional callback for custom URL→window handling. Overrides default auto-focus/open behavior. */
+	onPathChange?: (componentId: T) => void;
 }
 
 export interface UseWindowRoutingReturn<T extends string = string> {
-	onFocusChange: (windowId: string | null) => void;
+	/** Get the componentId for the current URL path */
 	getInitialWindowId: () => T | undefined;
+	/** Get the current URL path */
 	getCurrentPath: () => string;
 }
 
+/**
+ * Hook that provides bidirectional sync between window focus and URL.
+ *
+ * - When a window is focused, the URL updates to match
+ * - When the URL changes (e.g., browser back/forward), the corresponding window is focused/opened
+ *
+ * @example
+ * ```tsx
+ * function DesktopWithRouting() {
+ *     useWindowRouting({
+ *         windows,
+ *         adapter: createBrowserAdapter({ basePath: "/app" }),
+ *     });
+ *
+ *     return <DesktopContent />;
+ * }
+ * ```
+ */
 export function useWindowRouting<T extends string = string>(
 	options: UseWindowRoutingOptions<T>,
 ): UseWindowRoutingReturn<T> {
-	const {
-		pathMap,
-		pathToIdMap: providedPathToIdMap,
-		adapter = createBrowserAdapter(),
-		useComponentId = true,
-	} = options;
+	const { windows, adapter = createBrowserAdapter(), onPathChange } = options;
 
-	const { state } = useWindowManager();
+	const { state, getWindowByComponentId, focusWindow, openOrFocusWindow } =
+		useWindowManager();
 
-	const pathToIdMap = useMemo(() => {
-		if (providedPathToIdMap) {
-			return providedPathToIdMap;
-		}
-		const reverse: Record<string, T> = {};
-		for (const [id, path] of Object.entries(pathMap)) {
-			if (path !== undefined) {
-				reverse[path as string] = id as T;
-			}
-		}
-		return reverse;
-	}, [pathMap, providedPathToIdMap]);
+	// Extract path maps from windows object
+	const pathMap = useMemo(() => windows.getPathMap(), [windows]);
+	const pathToIdMap = useMemo(() => windows.getPathToIdMap(), [windows]);
 
 	const lastPathRef = useRef<string | null>(null);
 
-	const onFocusChange = useCallback(
-		(windowId: string | null) => {
-			if (!windowId) {
+	// Window → URL sync: Update URL when active window changes
+	useEffect(() => {
+		const activeWindowId = state.activeWindowId;
+		if (!activeWindowId) {
+			return;
+		}
+
+		const win = state.windows.find((w) => w.id === activeWindowId);
+		if (!win?.componentId) {
+			return;
+		}
+
+		const path = pathMap[win.componentId as T];
+		if (path && path !== lastPathRef.current) {
+			lastPathRef.current = path;
+			adapter.navigate(path);
+		}
+	}, [state.activeWindowId, state.windows, pathMap, adapter]);
+
+	// URL → Window sync: Update window when URL changes (e.g., browser back/forward)
+	useEffect(() => {
+		if (!adapter.subscribe) {
+			return;
+		}
+
+		return adapter.subscribe((path) => {
+			lastPathRef.current = path;
+
+			const componentId = pathToIdMap[path];
+			if (!componentId) {
 				return;
 			}
 
-			const win = state.windows.find((w) => w.id === windowId);
-			if (!win) {
+			// If custom handler provided, use it
+			if (onPathChange) {
+				onPathChange(componentId);
 				return;
 			}
 
-			const lookupKey = useComponentId ? win.componentId : windowId;
-			if (!lookupKey) {
-				return;
+			// Auto-handle: focus existing window or open new one
+			const existingWindow = getWindowByComponentId(componentId);
+			if (existingWindow) {
+				focusWindow(existingWindow.id);
+			} else {
+				openOrFocusWindow(windows.getWindowConfig(componentId));
 			}
-
-			const path = pathMap[lookupKey as T];
-			if (path && path !== lastPathRef.current) {
-				lastPathRef.current = path;
-				adapter.navigate(path);
-			}
-		},
-		[state.windows, pathMap, adapter, useComponentId],
-	);
+		});
+	}, [
+		adapter,
+		pathToIdMap,
+		onPathChange,
+		windows,
+		getWindowByComponentId,
+		focusWindow,
+		openOrFocusWindow,
+	]);
 
 	const getCurrentPath = useCallback(() => {
 		return adapter.getCurrentPath();
@@ -78,18 +118,7 @@ export function useWindowRouting<T extends string = string>(
 		return pathToIdMap[currentPath];
 	}, [adapter, pathToIdMap]);
 
-	useEffect(() => {
-		if (!adapter.subscribe) {
-			return;
-		}
-
-		return adapter.subscribe((path) => {
-			lastPathRef.current = path;
-		});
-	}, [adapter]);
-
 	return {
-		onFocusChange,
 		getInitialWindowId,
 		getCurrentPath,
 	};
