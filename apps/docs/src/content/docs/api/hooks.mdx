@@ -261,23 +261,47 @@ const { isDragging, wasDragged, dragHandleProps } = useIconDrag({
 
 ## useWindowRouting
 
-URL synchronization hook for window focus changes.
+Provides automatic bidirectional synchronization between window focus and browser URL.
+
+- When a window is focused → URL updates to match
+- When URL changes (browser back/forward) → Corresponding window is focused/opened
 
 ```tsx
-const { syncUrl } = useWindowRouting({
-  adapter: routingAdapter, // RoutingAdapter instance
-  pathMap: { home: "/", about: "/about" },
-  enabled: true,
+import { useWindowRouting, createBrowserAdapter } from 'glazier';
+import { defineWindows } from 'glazier/server';
+
+const windows = defineWindows({
+  home: { title: 'Home', path: '/', ... },
+  about: { title: 'About', path: '/about', ... },
 });
+
+const routingAdapter = createBrowserAdapter({ basePath: '/app' });
+
+function DesktopWithRouting() {
+  // That's it! Bidirectional sync happens automatically
+  useWindowRouting({
+    windows,
+    adapter: routingAdapter,
+  });
+
+  return <Desktop>{/* ... */}</Desktop>;
+}
 ```
 
 ### Options
 
-| Option    | Type                         | Default | Description               |
-| --------- | ---------------------------- | ------- | ------------------------- |
-| `adapter` | `RoutingAdapter`             | -       | Routing adapter (required) |
-| `pathMap` | `Record<string, string>`     | -       | Window ID to path mapping  |
-| `enabled` | `boolean`                    | `true`  | Enable URL sync           |
+| Option         | Type                           | Default           | Description                                                    |
+| -------------- | ------------------------------ | ----------------- | -------------------------------------------------------------- |
+| `windows`      | `WindowDefinitions`            | -                 | Window definitions from `defineWindows()` (required)           |
+| `adapter`      | `RoutingAdapter`               | `browserAdapter`  | Routing adapter for URL navigation                             |
+| `onPathChange` | `(componentId: string) => void`| -                 | Optional custom handler for URL→window sync (overrides default)|
+
+### Return Value
+
+| Property            | Type                    | Description                              |
+| ------------------- | ----------------------- | ---------------------------------------- |
+| `getInitialWindowId`| `() => string \| undefined` | Get componentId for current URL path |
+| `getCurrentPath`    | `() => string`          | Get the current URL path                 |
 
 ### RoutingAdapter Interface
 
@@ -285,6 +309,25 @@ const { syncUrl } = useWindowRouting({
 interface RoutingAdapter {
   navigate: (path: string) => void;
   getCurrentPath: () => string;
+  subscribe?: (callback: (path: string) => void) => () => void;
+}
+```
+
+### Example with Custom Base Path
+
+```tsx
+// For apps deployed at a subpath (e.g., /examples/astro/)
+const routingAdapter = createBrowserAdapter({
+  basePath: '/examples/astro',
+});
+
+function App() {
+  useWindowRouting({
+    windows,
+    adapter: routingAdapter,
+  });
+
+  return <Desktop>{/* ... */}</Desktop>;
 }
 ```
 

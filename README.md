@@ -32,6 +32,7 @@ Glazier provides unstyled, fully accessible window management components for Rea
 ### New in Latest Version
 
 - **`defineWindows`** - Unified configuration helper for windows, icons, and routes
+- **`useWindowRouting`** - Automatic bidirectional URL ↔ window sync (browser back/forward support)
 - **`WindowFrame` composables** - Pre-built primitives (TitleBar, Title, WindowControls, Content) that reduce boilerplate
 - **`ResizeHandles`** - Ready-to-use resize handles component
 - **`useIconLauncher`** - Hook for "open or focus" desktop icon pattern
@@ -351,22 +352,37 @@ function DesktopIcon({ iconId, iconState, ...props }) {
 
 ### URL Routing
 
-Sync window focus with browser URL:
+Sync window focus with browser URL using `useWindowRouting`. This hook provides automatic **bidirectional** synchronization:
+
+- Window focus → URL updates
+- Browser back/forward → Window focus/open
 
 ```tsx
-import { createBrowserAdapter } from 'glazier';
+import { useWindowRouting, createBrowserAdapter } from 'glazier';
+import { defineWindows } from 'glazier/server';
 
-const routingAdapter = createBrowserAdapter();
-const pathMap = windows.getPathMap();
+const windows = defineWindows({
+  home: { title: 'Home', path: '/', ... },
+  about: { title: 'About', path: '/about', ... },
+});
 
-<WindowManagerProvider
-  onFocusChange={(windowId) => {
-    if (windowId) {
-      const path = pathMap[windowId];
-      if (path) routingAdapter.navigate(path);
-    }
-  }}
->
+const routingAdapter = createBrowserAdapter({ basePath: '/app' });
+
+function DesktopWithRouting() {
+  // Bidirectional sync happens automatically
+  useWindowRouting({
+    windows,
+    adapter: routingAdapter,
+  });
+
+  return (
+    <WindowManagerProvider
+      defaultWindows={[windows.getWindowState('home')]}
+    >
+      <Desktop>{/* ... */}</Desktop>
+    </WindowManagerProvider>
+  );
+}
 ```
 
 ### Window Animations
