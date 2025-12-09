@@ -27,7 +27,7 @@ export function createBrowserAdapter(
 			}
 			const fullPath = basePath + path;
 			if (window.location.pathname !== fullPath) {
-				window.history.replaceState(null, "", fullPath);
+				window.history.pushState(null, "", fullPath);
 			}
 		},
 
